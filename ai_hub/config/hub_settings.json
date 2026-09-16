@@ -1,0 +1,21 @@
+{
+  "active_provider": "groq",
+  "history_enabled": true,
+  "providers": {
+    "groq": {
+      "name": "Groq AI (Llama 3.3)",
+      "model": "llama-3.3-70b-versatile",
+      "status": "active"
+    },
+    "gemini": {
+      "name": "Google Gemini",
+      "model": "gemini-1.5-flash",
+      "status": "ready"
+    },
+    "openai": {
+      "name": "OpenAI ChatGPT",
+      "model": "gpt-4o",
+      "status": "ready"
+    }
+  }
+}

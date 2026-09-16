@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Manifest – Profile & Edit Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+  <style>
+    /* ── Reset ─────────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      min-height: 100vh;
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, #f3eeff 0%, #ffeef7 100%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 40px;
+      padding: 32px 20px 60px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Phone shell ────────────────────────── ─────────── */
+    .phone {
+      width: 390px;
+      height: 844px;
+      background: #fff;
+      border-radius: 44px;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      box-shadow: 0 32px 80px rgba(123, 47, 247, .2), 0 0 0 1px rgba(123, 47, 247, .08);
+    }
+
+    .phone-label {
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #9E9EAE;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ── Screens inside phone ──────────────────────────── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      transition: transform .35s cubic-bezier(.22, 1, .36, 1), opacity .3s;
+    }
+
+    .screen.hidden-right {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none
+    }
+
+    .screen.hidden-left {
+      transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none
+    }
+
+    /* ═══════════════════════════════════════════════════
+       PROFILE SCREEN
+    ═══════════════════════════════════════════════════ */
+
+    /* Hero header */
+    .profile-hero {
+      flex-shrink: 0;
+      height: 310px;
+      position: relative;
+      background: linear-gradient(135deg, #F3EEFF, #FFEEF7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 28px;
+      overflow: hidden;
+    }
+
+    .hero-glow1 {
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(123, 47, 247, .08) 0%, transparent 70%);
+    }
+
+    .hero-glow2 {
+      position: absolute;
+      bottom: -20px;
+      left: -30px;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(233, 30, 140, .07) 0%, transparent 70%);
+    }
+
+    /* Back + Settings bar */
+    .hero-topbar {
+      position: absolute;
+      top: 48px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 10;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: rgba(255, 255, 255, .7);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: background .2s;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, .9)
+    }
+
+    .icon-btn .material-icons-round {
+      font-size: 20px;
+      color: #1A1A2E
+    }
+
+    /* Avatar ring */
+    .avatar-ring {
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      padding: 4px;
+      background: linear-gradient(135deg, #7B2FF7, #E91E8C);
+      box-shadow: 0 0 30px 2px rgba(123, 47, 247, .15);
+      position: relative;
+      z-index: 1;
+    }
+
+    .avatar-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 2px solid #fff;
+      font-size: 52px;
+    }
+
+    .profile-name {
+      font-size: 28px;
+      font-weight: 900;
+      color: #1A1A2E;
+      margin-top: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+      position: relative;
+      z-index: 1;
+    }
+
+    .badge-icon {
+      font-size: 14px;
+      background: linear-gradient(90deg, #7B2FF7, #E91E8C);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .badge-text {
+      font-size: 11px;
+      font-weight: 800;
+      color: #7B2FF7;
+      letter-spacing: .5px
+    }
+
+    /* Scroll content */
+    .profile-body {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: none;
+      padding: 30px 24px 40px;
+    }
+
+    .profile-body::-webkit-scrollbar {
+      display: none
+    }
+
+    /* Stat cards row */
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 40px
+    }
+
+    .stat-card {
+      flex: 1;
+      padding: 20px 10px;
+      border-radius: 24px;
+      background: #fff;
+      border: 1.5px solid #F3EEFF;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(123, 47, 247, .06);
+    }
+
+    .stat-icon-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+    }
+
+    .stat-icon-wrap .material-icons-round {
+      font-size: 22px
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 900;
+      color: #1A1A2E
+    }
+
+    .stat-label {
+      font-size: 9px;
+      font-weight: 800;
+      color: #757585;
+      letter-spacing: .5px;
+      margin-top: 3px
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 12px;
+      font-weight: 900;
+      color: rgba(26, 26, 46, .4);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* Menu tiles */
+    .menu-tile {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 16px;
+      border-radius: 20px;
+      background: #FBF9FF;
+      border: 1px solid #F3EEFF;
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .menu-tile:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(123, 47, 247, .08)
+    }
+
+    .menu-tile-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #fff;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .03);
+    }
+
+    .menu-tile-icon .material-icons-round {
+      font-size: 20px;
+      background: linear-gradient(135deg, #7B2FF7, #E91E8C);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .menu-tile-body {
+      flex: 1
+    }
+
+    .menu-tile-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1A1A2E
+    }
+
+    .menu-tile-sub {
+      font-size: 12px;
+      color: #757585;
+      margin-top: 3px
+    }
+
+    .menu-tile-chevron .material-icons-round {
+      font-size: 22px;
+      color: #BBB0CC
+    }
+
+    /* Logout + version */
+    .logout-section {
+      text-align: center;
+      margin-top: 40px;
+      padding-bottom: 40px
+    }
+
+    .logout-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 900;
+      color: #E91E8C;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      border-radius: 20px;
+      transition: background .2s;
+    }
+
+    .logout-btn:hover {
+      background: rgba(233, 30, 140, .06)
+    }
+
+    .logout-btn .material-icons-round {
+      font-size: 18px
+    }
+
+    .version-text {
+      font-size: 12px;
+      color: #BBB0CC;
+      margin-top: 16px
+    }
+
+    /* ═══════════════════════════════════════════════════
+       EDIT PROFILE SCREEN
+    ═══════════════════════════════════════════════════ */
+    .edit-appbar {
+      flex-shrink: 0;
+      height: 100px;
+      background: #fff;
+      display: flex;
+      align-items: flex-end;
+      padding: 0 8px 12px;
+      border-bottom: 1px solid #F3EEFF;
+    }
+
+    .appbar-title {
+      flex: 1;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 900;
+      color: #1A1A2E;
+      letter-spacing: 2px;
+    }
+
+    .edit-body {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: none;
+      padding: 40px 24px;
+    }
+
+    .edit-body::-webkit-scrollbar {
+      display: none
+    }
+
+    /* Avatar edit */
+    .edit-avatar-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 40px;
+      position: relative
+    }
+
+    .edit-avatar-ring {
+      width: 148px;
+      height: 148px;
+      border-radius: 50%;
+      padding: 4px;
+      background: linear-gradient(135deg, #7B2FF7, #E91E8C);
+      box-shadow: 0 0 30px 2px rgba(123, 47, 247, .15);
+      position: relative;
+    }
+
+    .edit-avatar-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #fff;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 58px;
+    }
+
+    .edit-cam-btn {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: #7B2FF7;
+      box-shadow: 0 4px 10px rgba(123, 47, 247, .4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .2s, background .2s;
+    }
+
+    .edit-cam-btn:hover {
+      transform: scale(1.1);
+      background: #6a22e0
+    }
+
+    .edit-cam-btn .material-icons-round {
+      font-size: 18px;
+      color: #fff
+    }
+
+    /* Field label */
+    .field-label {
+      font-size: 11px;
+      font-weight: 900;
+      color: rgba(26, 26, 46, .4);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .field-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: #FBF9FF;
+      border-radius: 20px;
+      border: 1.5px solid #F3EEFF;
+      overflow: hidden;
+      transition: border-color .3s, box-shadow .3s;
+    }
+
+    .field-wrap:focus-within {
+      border-color: #7B2FF7;
+      box-shadow: 0 4px 16px rgba(123, 47, 247, .12);
+    }
+
+    .field-prefix {
+      padding: 18px 8px 18px 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    .field-prefix .material-icons-round {
+      font-size: 20px;
+      color: rgba(123, 47, 247, .5)
+    }
+
+    .field-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      outline: none;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A2E;
+      padding: 18px 20px 18px 4px;
+    }
+
+    .field-input::placeholder {
+      color: #BBB0CC;
+      font-weight: 400
+    }
+
+    /* Save button */
+    .save-btn {
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #7B2FF7, #E91E8C);
+      box-shadow: 0 6px 24px rgba(233, 30, 140, .35);
+      margin-top: 20px;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .save-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(233, 30, 140, .45)
+    }
+
+    .save-btn:active {
+      transform: translateY(0)
+    }
+
+    .edit-hint {
+      text-align: center;
+      font-size: 12px;
+      color: #BBB0CC;
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+
+    /* ── Toast ─────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      padding: 14px 24px;
+      border-radius: 16px;
+      background: #7B2FF7;
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 9999;
+      pointer-events: none;
+      transition: transform .4s cubic-bezier(.22, 1, .36, 1), opacity .3s;
+      opacity: 0;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1
+    }
+
+    .toast.success {
+      background: #4CAF50
+    }
+
+    /* ── Keyframes ─────────────────────────────────────── */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══ PROFILE PHONE ══════════════════════════════════════ -->
+  <div>
+    <div class="phone-label">Profile Screen</div>
+    <div class="phone" id="phone-profile">
+
+      <!-- ── PROFILE SCREEN ─────────────────────────────── -->
+      <div class="screen" id="screen-profile">
+        <!-- Hero -->
+        <div class="profile-hero">
+          <div class="hero-glow1"></div>
+          <div class="hero-glow2"></div>
+          <div class="hero-topbar">
+            <button class="icon-btn" title="Back" onclick="history.back()">
+              <span class="material-icons-round">arrow_back_ios_new</span>
+            </button>
+            <button class="icon-btn" title="Edit Profile" onclick="openEdit()">
+              <span class="material-icons-round">settings_suggest</span>
+            </button>
+          </div>
+          <div class="avatar-ring">
+            <div class="avatar-inner" id="profile-avatar">🌟</div>
+          </div>
+          <div class="profile-name" id="profile-name">Alex Rivera</div>
+          <div class="profile-badge">
+            <span class="badge-icon material-icons-round">auto_awesome</span>
+            <span class="badge-text">Cosmic Visionary</span>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="profile-body">
+          <!-- Stats -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-icon-wrap" style="background:rgba(123,47,247,.1)">
+                <span class="material-icons-round" style="color:#7B2FF7">star</span>
+              </div>
+              <div class="stat-value">12</div>
+              <div class="stat-label">MANIFESTED</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrap" style="background:rgba(233,30,140,.1)">
+                <span class="material-icons-round" style="color:#E91E8C">local_fire_department</span>
+              </div>
+              <div class="stat-value">15</div>
+              <div class="stat-label">STREAK</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrap" style="background:rgba(41,121,255,.1)">
+                <span class="material-icons-round" style="color:#2979FF">flag</span>
+              </div>
+              <div class="stat-value">12</div>
+              <div class="stat-label">GOALS</div>
+            </div>
+          </div>
+
+          <!-- Menu -->
+          <div class="section-label">Personal Dimensions</div>
+
+          <div class="menu-tile" onclick="showToast('Spiritual Archetype coming soon! 🔮')">
+            <div class="menu-tile-icon"><span class="material-icons-round">psychology</span></div>
+            <div class="menu-tile-body">
+              <div class="menu-tile-title">Spiritual Archetype</div>
+              <div class="menu-tile-sub">Your manifestation DNA and patterns</div>
+            </div>
+            <div class="menu-tile-chevron"><span class="material-icons-round">chevron_right</span></div>
+          </div>
+
+          <div class="menu-tile" onclick="showToast('Vision Board coming soon! 🎯')">
+            <div class="menu-tile-icon"><span class="material-icons-round">auto_graph</span></div>
+            <div class="menu-tile-body">
+              <div class="menu-tile-title">Vision Board</div>
+              <div class="menu-tile-sub">Active dream manifestations</div>
+            </div>
+            <div class="menu-tile-chevron"><span class="material-icons-round">chevron_right</span></div>
+          </div>
+
+          <div class="menu-tile" onclick="showToast('Privacy Settings coming soon! 🔒')">
+            <div class="menu-tile-icon"><span class="material-icons-round">security</span></div>
+            <div class="menu-tile-body">
+              <div class="menu-tile-title">Privacy Settings</div>
+              <div class="menu-tile-sub">Data protection and sphere visibility</div>
+            </div>
+            <div class="menu-tile-chevron"><span class="material-icons-round">chevron_right</span></div>
+          </div>
+
+          <div class="menu-tile" onclick="showToast('Notification settings coming soon! 🔔')">
+            <div class="menu-tile-icon"><span class="material-icons-round">notifications_active</span></div>
+            <div class="menu-tile-body">
+              <div class="menu-tile-title">App Notifications</div>
+              <div class="menu-tile-sub">Reminder frequency and cosmic timing</div>
+            </div>
+            <div class="menu-tile-chevron"><span class="material-icons-round">chevron_right</span></div>
+          </div>
+
+          <!-- Logout -->
+          <div class="logout-section">
+            <button class="logout-btn" onclick="showToast('Disconnected from the cosmos. 🌌', false)">
+              <span class="material-icons-round">logout</span>
+              DEACTIVATE CONNECTION
+            </button>
+            <div class="version-text">Version 2.4.0 (AI Enhanced)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── EDIT PROFILE SCREEN ────────────────────────── -->
+      <div class="screen hidden-right" id="screen-edit">
+        <!-- AppBar -->
+        <div class="edit-appbar">
+          <button class="icon-btn" style="margin-left:4px" onclick="closeEdit()">
+            <span class="material-icons-round">arrow_back_ios_new</span>
+          </button>
+          <div class="appbar-title">EDIT IDENTITY</div>
+          <div style="width:48px"></div>
+        </div>
+
+        <!-- Body -->
+        <div class="edit-body">
+          <!-- Avatar -->
+          <div class="edit-avatar-wrap">
+            <div class="edit-avatar-ring">
+              <div class="edit-avatar-inner" id="edit-avatar">🌟</div>
+              <button class="edit-cam-btn" onclick="randomiseAvatar()" title="Change avatar">
+                <span class="material-icons-round">camera_alt</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Name field -->
+          <div class="field-label">Manifestor Name</div>
+          <div class="field-wrap">
+            <div class="field-prefix"><span class="material-icons-round">person</span></div>
+            <input class="field-input" id="edit-name-input" type="text" value="Alex Rivera"
+              placeholder="Enter your name..." />
+          </div>
+
+          <!-- Save -->
+          <button class="save-btn" onclick="saveProfile()">SAVE CHANGES ✨</button>
+
+          <div class="edit-hint">Your digital identity is used across your manifestations.</div>
+        </div>
+      </div>
+
+    </div><!-- /phone -->
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /* ── Screen navigation ──────────────────────────────── */
+    function openEdit() {
+      document.getElementById('screen-profile').classList.add('hidden-left');
+      document.getElementById('screen-edit').classList.remove('hidden-right');
+      // sync name
+      document.getElementById('edit-name-input').value =
+        document.getElementById('profile-name').textContent;
+    }
+
+    function closeEdit() {
+      document.getElementById('screen-edit').classList.add('hidden-right');
+      document.getElementById('screen-profile').classList.remove('hidden-left');
+    }
+
+    /* ── Avatar randomiser (mimics DiceBear seed) ──────── */
+    const AVATARS = ['🌟', '🦋', '🌙', '🔮', '✨', '🌈', '🌸', '🦄', '⚡', '🌺'];
+    let avatarIdx = 0;
+    function randomiseAvatar() {
+      avatarIdx = (avatarIdx + 1) % AVATARS.length;
+      document.getElementById('edit-avatar').textContent = AVATARS[avatarIdx];
+      document.getElementById('profile-avatar').textContent = AVATARS[avatarIdx];
+    }
+
+    /* ── Save profile ───────────────────────────────────── */
+    function saveProfile() {
+      const name = document.getElementById('edit-name-input').value.trim();
+      if (!name) {
+        showToast('Your cosmic identity must have a name! ✨', false);
+        return;
+      }
+      document.getElementById('profile-name').textContent = name;
+      closeEdit();
+
+      // slight delay so slide animation plays first
+      setTimeout(() => showToast('Profile synchronized with the universe. 🌌', true), 400);
+    }
+
+    /* ── Toast helper ───────────────────────────────────── */
+    let toastTimer = null;
+    function showToast(msg, isSuccess = null) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      if (isSuccess === true) { el.style.background = '#4CAF50'; }
+      else if (isSuccess === false) { el.style.background = '#7B2FF7'; }
+      else { el.style.background = '#1A1A2E'; }
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+    }
+  </script>
+
+</body>
+
+</html>

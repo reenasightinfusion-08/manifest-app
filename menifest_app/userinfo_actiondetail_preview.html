@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Manifest – User Info & Action Detail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{
+      min-height:100vh;font-family:'Outfit',sans-serif;
+      background:linear-gradient(135deg,#f3eeff,#ffeef7);
+      display:flex;align-items:flex-start;justify-content:center;
+      gap:40px;padding:32px 20px 60px;flex-wrap:wrap;
+    }
+    .phone-wrap{display:flex;flex-direction:column;align-items:center}
+    .phone-label{
+      font-size:12px;font-weight:700;color:#9E9EAE;letter-spacing:1px;
+      text-transform:uppercase;margin-bottom:12px;
+    }
+    .phone{
+      width:390px;height:844px;background:#fff;border-radius:44px;
+      overflow:hidden;position:relative;flex-shrink:0;
+      box-shadow:0 32px 80px rgba(123,47,247,.22),0 0 0 1px rgba(123,47,247,.08);
+    }
+
+    /* Utility */
+    .grad-text{
+      background:linear-gradient(90deg,#7B2FF7,#E91E8C);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+
+    /* ═══════════════════════════════════════════════
+       USER INFO SCREEN
+    ═══════════════════════════════════════════════ */
+    #phone-userinfo{ background:#fff }
+
+    /* Top bar */
+    .ui-topbar{
+      position:absolute;top:0;left:0;right:0;z-index:20;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:52px 24px 0;
+    }
+    .back-circle{
+      width:44px;height:44px;border-radius:50%;border:1.5px solid #E8E0F5;
+      background:#fff;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.04);
+      transition:opacity .3s;
+    }
+    .back-circle.invisible{opacity:0;pointer-events:none}
+    .back-circle .material-icons-round{font-size:18px;color:#1A1A2E}
+    .step-badge{
+      padding:5px 14px;border-radius:20px;
+      background:#F3EEFF;border:1px solid #E8E0F5;
+      font-size:12px;font-weight:700;color:#7B2FF7;
+    }
+
+    /* Progress bar */
+    .ui-progress{
+      position:absolute;top:108px;left:24px;right:24px;z-index:20;
+      display:flex;gap:8px;
+    }
+    .prog-seg{
+      flex:1;height:4px;border-radius:2px;background:#DDD0F5;
+      transition:background .4s;
+    }
+    .prog-seg.done{
+      background:linear-gradient(90deg,#7B2FF7,#E91E8C);
+    }
+
+    /* Blobs */
+    .ui-blob1{
+      position:absolute;top:-100px;right:-60px;width:320px;height:320px;
+      border-radius:50%;
+      background:radial-gradient(circle,rgba(123,47,247,.06) 0%,transparent 70%);
+      pointer-events:none;
+    }
+    .ui-blob2{
+      position:absolute;bottom:-50px;left:-40px;width:280px;height:280px;
+      border-radius:50%;
+      background:radial-gradient(circle,rgba(233,30,140,.05) 0%,transparent 70%);
+      pointer-events:none;
+    }
+
+    /* Scrollable page area */
+    .ui-pages{
+      position:absolute;top:140px;left:0;right:0;bottom:100px;
+      overflow:hidden;
+    }
+    .ui-page{
+      position:absolute;inset:0;
+      overflow-y:auto;scrollbar-width:none;padding:12px 24px 30px;
+      transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .3s;
+    }
+    .ui-page::-webkit-scrollbar{display:none}
+    .ui-page.hidden-right{transform:translateX(110%);opacity:0;pointer-events:none}
+    .ui-page.hidden-left{transform:translateX(-110%);opacity:0;pointer-events:none}
+
+    /* Page header */
+    .page-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+    .page-icon{
+      width:50px;height:50px;border-radius:16px;flex-shrink:0;
+      background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 12px rgba(123,47,247,.3);
+    }
+    .page-icon .material-icons-round{font-size:26px;color:#fff}
+    .page-tag{font-size:12px;font-weight:800;color:#7B2FF7;letter-spacing:2px}
+    .page-title{font-size:22px;font-weight:900;color:#1A1A2E;line-height:1.1;margin-top:2px}
+
+    /* Question card */
+    .q-card{
+      border-radius:20px;border:1px solid #F3EEFF;background:#fff;
+      padding:16px;margin-bottom:18px;
+      box-shadow:0 3px 8px rgba(0,0,0,.04);
+      transition:border-color .3s,box-shadow .3s;
+    }
+    .q-card:focus-within{
+      border-color:#E91E8C;border-width:1.5px;
+      box-shadow:0 4px 16px rgba(233,30,140,.12);
+    }
+    .q-label{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .q-num{
+      width:26px;height:26px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(123,47,247,.6),rgba(233,30,140,.6));
+      display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:800;color:#fff;
+    }
+    .q-text{font-size:14px;font-weight:600;color:#1A1A2E;line-height:1.4}
+    .q-input,.q-textarea{
+      width:100%;border:none;outline:none;
+      font-family:'Outfit',sans-serif;font-size:14px;color:#1A1A2E;
+      background:#F8F4FF;border-radius:12px;
+      padding:12px 14px 12px 38px;
+      background-image:none;
+    }
+    .q-field{position:relative}
+    .q-field .material-icons-round{
+      position:absolute;left:10px;top:50%;transform:translateY(-50%);
+      font-size:18px;color:rgba(123,47,247,.5);pointer-events:none;
+    }
+    .q-field.multi .material-icons-round{top:14px;transform:none}
+    .q-textarea{resize:none;min-height:72px}
+
+    /* Security step */
+    .sec-icon-wrap{
+      width:108px;height:108px;border-radius:50%;background:#FBF9FF;
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 28px;
+    }
+    .sec-icon-wrap .material-icons-round{font-size:58px;color:rgba(123,47,247,.3)}
+    .sec-desc{font-size:14px;color:#757585;line-height:1.6;text-align:center;margin-bottom:36px}
+    .pin-row{display:flex;justify-content:center;gap:12px;margin-bottom:16px}
+    .pin-box{
+      width:45px;height:55px;border-radius:16px;background:#fff;
+      border:1px solid #F3EEFF;
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;color:#7B2FF7;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    .pin-box.filled{
+      border-color:#7B2FF7;border-width:2px;
+      box-shadow:0 0 10px 2px rgba(123,47,247,.1);
+    }
+    .pin-hint{font-size:10px;color:#BBB0CC;letter-spacing:2px;text-align:center;font-weight:700}
+
+    /* Numpad */
+    .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+    .numpad-key{
+      height:56px;border:none;border-radius:16px;background:#F8F4FF;
+      font-family:'Outfit',sans-serif;font-size:20px;font-weight:700;color:#1A1A2E;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;
+      transition:background .15s,transform .1s;
+    }
+    .numpad-key:hover{background:#EEE5FF}
+    .numpad-key:active{transform:scale(.93)}
+    .numpad-key.del{background:#fff;color:#E91E8C;font-size:16px}
+    .numpad-key.empty{background:transparent;pointer-events:none}
+
+    /* Continue button */
+    .ui-continue{
+      position:absolute;bottom:0;left:0;right:0;padding:0 24px 36px;
+    }
+    .continue-btn{
+      width:100%;height:60px;border:none;border-radius:20px;cursor:pointer;
+      font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:#fff;
+      background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      box-shadow:0 8px 20px rgba(233,30,140,.4);
+      transition:transform .2s,box-shadow .2s;
+    }
+    .continue-btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(233,30,140,.5)}
+    .continue-btn:active{transform:translateY(0)}
+
+    /* ═══════════════════════════════════════════════
+       ACTION DETAIL SCREEN
+    ═══════════════════════════════════════════════ */
+    #phone-actiondetail{ background:#F8F5FF }
+
+    /* Hero header */
+    .ad-hero{
+      height:260px;background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      position:relative;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;padding:48px 28px 28px;
+      overflow:hidden;flex-shrink:0;
+    }
+    .ad-blob1{
+      position:absolute;top:-40px;right:-40px;width:180px;height:180px;
+      border-radius:50%;background:rgba(255,255,255,.07);
+    }
+    .ad-blob2{
+      position:absolute;bottom:-30px;left:-30px;width:130px;height:130px;
+      border-radius:50%;background:rgba(255,255,255,.07);
+    }
+    .ad-back{
+      position:absolute;top:52px;left:8px;
+      width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+      background:rgba(255,255,255,.18);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .ad-back .material-icons-round{font-size:18px;color:#fff}
+    .ad-step-badge{
+      padding:6px 18px;border-radius:20px;
+      background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+      font-size:10px;font-weight:800;letter-spacing:2.5px;color:#fff;
+      margin-bottom:16px;position:relative;z-index:1;
+    }
+    .ad-title{
+      font-size:26px;font-weight:900;color:#fff;text-align:center;
+      line-height:1.25;position:relative;z-index:1;
+    }
+
+    /* Body */
+    .ad-body{
+      flex:1;overflow-y:auto;scrollbar-width:none;padding:28px 20px 40px;
+    }
+    .ad-body::-webkit-scrollbar{display:none}
+
+    /* Audio player card */
+    .audio-card{
+      border-radius:28px;padding:20px;margin-bottom:28px;
+      background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      box-shadow:0 12px 24px rgba(123,47,247,.28);
+    }
+    .audio-top{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+    .play-btn{
+      width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
+      background:#fff;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 8px rgba(0,0,0,.12);
+      transition:transform .2s;
+    }
+    .play-btn:hover{transform:scale(1.08)}
+    .play-btn .material-icons-round{font-size:32px;color:#7B2FF7}
+    .audio-info{flex:1}
+    .audio-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:3px}
+    .audio-sub{font-size:11px;color:rgba(255,255,255,.75)}
+    .speed-chip{
+      padding:5px 10px;border-radius:20px;
+      background:rgba(255,255,255,.2);
+      font-size:11px;font-weight:900;color:#fff;cursor:pointer;
+      transition:background .2s;
+    }
+    .speed-chip:hover{background:rgba(255,255,255,.3)}
+    .audio-controls{display:flex;justify-content:space-between}
+    .speed-btn{
+      padding:7px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.2);
+      background:rgba(255,255,255,.15);
+      font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;
+      color:#fff;cursor:pointer;
+      transition:background .2s;
+    }
+    .speed-btn:hover{background:rgba(255,255,255,.25)}
+
+    /* Waveform animation */
+    .waveform{
+      display:flex;align-items:center;gap:3px;height:24px;
+      margin:0 auto 0;
+    }
+    .wave-bar{
+      width:3px;border-radius:2px;background:rgba(255,255,255,.6);
+      animation:wavePulse 1s ease-in-out infinite;
+    }
+    .wave-bar:nth-child(1){animation-delay:.0s;height:8px}
+    .wave-bar:nth-child(2){animation-delay:.1s;height:14px}
+    .wave-bar:nth-child(3){animation-delay:.2s;height:20px}
+    .wave-bar:nth-child(4){animation-delay:.3s;height:12px}
+    .wave-bar:nth-child(5){animation-delay:.4s;height:18px}
+    .wave-bar:nth-child(6){animation-delay:.5s;height:8px}
+    .wave-bar:nth-child(7){animation-delay:.6s;height:16px}
+    .wave-bar.paused{animation-play-state:paused!important}
+
+    /* Cosmic essence section */
+    .section-label-sm{
+      font-size:11px;font-weight:800;letter-spacing:2px;
+      color:rgba(123,47,247,.5);margin-bottom:12px;padding-left:4px;
+    }
+    .summary-card{
+      border-radius:24px;background:#fff;padding:22px;
+      border:1.5px solid rgba(233,30,140,.15);
+      box-shadow:0 8px 20px rgba(123,47,247,.06);
+      margin-bottom:24px;
+    }
+    .summary-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .summary-icon{
+      width:30px;height:30px;border-radius:10px;flex-shrink:0;
+      background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .summary-icon .material-icons-round{font-size:14px;color:#fff}
+    .summary-key-label{font-size:13px;font-weight:800;color:#7B2FF7}
+    .summary-text{font-size:15px;font-weight:600;color:#1A1A2E;line-height:1.6}
+
+    /* Description card */
+    .desc-card{
+      border-radius:24px;background:#fff;padding:22px;
+      border:1px solid #F3EEFF;
+      box-shadow:0 4px 12px rgba(123,47,247,.04);
+    }
+    .desc-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .desc-icon-wrap{
+      width:30px;height:30px;border-radius:10px;flex-shrink:0;
+      background:rgba(123,47,247,.1);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .desc-icon-wrap .material-icons-round{font-size:16px;color:#7B2FF7}
+    .desc-label{font-size:13px;font-weight:800;color:#1A1A2E}
+    .desc-text{font-size:14px;color:#757585;line-height:1.7}
+
+    /* Keyframes */
+    @keyframes wavePulse{
+      0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1)}
+    }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+
+<!-- ══ USER INFO PHONE ═════════════════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">User Info Screen</div>
+  <div class="phone" id="phone-userinfo">
+    <div class="ui-blob1"></div>
+    <div class="ui-blob2"></div>
+
+    <!-- Top bar -->
+    <div class="ui-topbar">
+      <div class="back-circle invisible" id="ui-back" onclick="uiBack()">
+        <span class="material-icons-round">arrow_back</span>
+      </div>
+      <div class="step-badge" id="step-badge">Step 1 of 4</div>
+    </div>
+
+    <!-- Progress -->
+    <div class="ui-progress">
+      <div class="prog-seg done" id="seg-0"></div>
+      <div class="prog-seg" id="seg-1"></div>
+      <div class="prog-seg" id="seg-2"></div>
+      <div class="prog-seg" id="seg-3"></div>
+    </div>
+
+    <!-- Page Area -->
+    <div class="ui-pages">
+
+      <!-- Step 0: About You -->
+      <div class="ui-page" id="ui-page-0">
+        <div class="page-header">
+          <div class="page-icon"><span class="material-icons-round">person_outline</span></div>
+          <div>
+            <div class="page-tag">ABOUT YOU</div>
+            <div class="page-title">Tell Us<br>About Yourself</div>
+          </div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">1</div><div class="q-text">What is your first name?</div></div>
+          <div class="q-field"><span class="material-icons-round">badge</span><input class="q-input" type="text" placeholder="e.g. Alex"/></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">2</div><div class="q-text">How old are you?</div></div>
+          <div class="q-field"><span class="material-icons-round">cake</span><input class="q-input" type="text" placeholder="e.g. 25"/></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">3</div><div class="q-text">Where are you from?</div></div>
+          <div class="q-field"><span class="material-icons-round">location_on</span><input class="q-input" type="text" placeholder="e.g. Mumbai, India"/></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">4</div><div class="q-text">What are your top 3 personal goals?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">flag</span><textarea class="q-textarea" placeholder="e.g. Health, peace, growth"></textarea></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">5</div><div class="q-text">What does a perfect day look like for you?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">wb_sunny</span><textarea class="q-textarea" placeholder="Describe it freely…"></textarea></div>
+        </div>
+      </div>
+
+      <!-- Step 1: Family -->
+      <div class="ui-page hidden-right" id="ui-page-1">
+        <div class="page-header">
+          <div class="page-icon"><span class="material-icons-round">family_restroom</span></div>
+          <div>
+            <div class="page-tag">FAMILY</div>
+            <div class="page-title">Your Family<br>Life</div>
+          </div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">1</div><div class="q-text">Are you single, partnered, or married?</div></div>
+          <div class="q-field"><span class="material-icons-round">favorite_border</span><input class="q-input" type="text" placeholder="e.g. Married"/></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">2</div><div class="q-text">Do you have children?</div></div>
+          <div class="q-field"><span class="material-icons-round">child_care</span><input class="q-input" type="text" placeholder="e.g. Yes, 2 kids"/></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">3</div><div class="q-text">What is your biggest family dream?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">home</span><textarea class="q-textarea" placeholder="e.g. A happy home, travel together"></textarea></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">4</div><div class="q-text">What family relationship do you most want to improve?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">handshake</span><textarea class="q-textarea" placeholder="e.g. With my parents"></textarea></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">5</div><div class="q-text">What family value matters most to you?</div></div>
+          <div class="q-field"><span class="material-icons-round">volunteer_activism</span><input class="q-input" type="text" placeholder="e.g. Loyalty, love, respect"/></div>
+        </div>
+      </div>
+
+      <!-- Step 2: Career -->
+      <div class="ui-page hidden-right" id="ui-page-2">
+        <div class="page-header">
+          <div class="page-icon"><span class="material-icons-round">work_outline</span></div>
+          <div>
+            <div class="page-tag">PROFESSIONAL</div>
+            <div class="page-title">Your Career<br>&amp; Ambitions</div>
+          </div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">1</div><div class="q-text">What do you do for work?</div></div>
+          <div class="q-field"><span class="material-icons-round">business_center</span><input class="q-input" type="text" placeholder="e.g. Software Engineer"/></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">2</div><div class="q-text">What is your biggest career goal right now?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">trending_up</span><textarea class="q-textarea" placeholder="e.g. Get promoted, start a business"></textarea></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">3</div><div class="q-text">What skills do you want to develop?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">school</span><textarea class="q-textarea" placeholder="e.g. Leadership, coding, design"></textarea></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">4</div><div class="q-text">What does financial freedom mean to you?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">account_balance_wallet</span><textarea class="q-textarea" placeholder="Describe your vision…"></textarea></div>
+        </div>
+        <div class="q-card">
+          <div class="q-label"><div class="q-num">5</div><div class="q-text">Where do you see yourself professionally in 5 years?</div></div>
+          <div class="q-field multi"><span class="material-icons-round">star_outline</span><textarea class="q-textarea" placeholder="Dream big!"></textarea></div>
+        </div>
+      </div>
+
+      <!-- Step 3: Security / Passcode -->
+      <div class="ui-page hidden-right" id="ui-page-3" style="text-align:center;padding-top:8px">
+        <div class="page-header" style="justify-content:center">
+          <div class="page-icon"><span class="material-icons-round">security</span></div>
+          <div style="text-align:left">
+            <div class="page-tag">PROTECT THE COSMOS</div>
+            <div class="page-title">Your Secret<br>Passphrase</div>
+          </div>
+        </div>
+        <div class="sec-icon-wrap">
+          <span class="material-icons-round">lock_person</span>
+        </div>
+        <div class="sec-desc">To protect your manifestations, set a 4-digit code. This will be required when accessing your profile from any device.</div>
+        <div class="pin-row" id="pin-row">
+          <div class="pin-box" id="p0"></div>
+          <div class="pin-box" id="p1"></div>
+          <div class="pin-box" id="p2"></div>
+          <div class="pin-box" id="p3"></div>
+        </div>
+        <div class="pin-hint">TAP TO ENTER CODE</div>
+        <div class="numpad">
+          <button class="numpad-key" onclick="pinKey('1')">1</button>
+          <button class="numpad-key" onclick="pinKey('2')">2</button>
+          <button class="numpad-key" onclick="pinKey('3')">3</button>
+          <button class="numpad-key" onclick="pinKey('4')">4</button>
+          <button class="numpad-key" onclick="pinKey('5')">5</button>
+          <button class="numpad-key" onclick="pinKey('6')">6</button>
+          <button class="numpad-key" onclick="pinKey('7')">7</button>
+          <button class="numpad-key" onclick="pinKey('8')">8</button>
+          <button class="numpad-key" onclick="pinKey('9')">9</button>
+          <div class="numpad-key empty"></div>
+          <button class="numpad-key" onclick="pinKey('0')">0</button>
+          <button class="numpad-key del" onclick="pinDel()"><span class="material-icons-round" style="font-size:20px">backspace</span></button>
+        </div>
+      </div>
+
+    </div><!-- /ui-pages -->
+
+    <!-- Continue button -->
+    <div class="ui-continue">
+      <button class="continue-btn" id="ui-continue-btn" onclick="uiNext()">Continue</button>
+    </div>
+
+  </div><!-- /phone -->
+</div>
+
+<!-- ══ ACTION DETAIL PHONE ═══════════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Action Detail Screen</div>
+  <div class="phone" id="phone-actiondetail" style="display:flex;flex-direction:column">
+
+    <!-- Hero -->
+    <div class="ad-hero">
+      <div class="ad-blob1"></div>
+      <div class="ad-blob2"></div>
+      <button class="ad-back"><span class="material-icons-round">arrow_back_ios_new</span></button>
+      <div class="ad-step-badge" id="ad-step-badge">STEP 3</div>
+      <div class="ad-title" id="ad-title">Manifest Your<br>Reality</div>
+    </div>
+
+    <!-- Body -->
+    <div class="ad-body">
+
+      <!-- Audio player -->
+      <div class="audio-card">
+        <div class="audio-top">
+          <button class="play-btn" id="play-btn" onclick="togglePlay()">
+            <span class="material-icons-round" id="play-icon">play_arrow</span>
+          </button>
+          <div class="audio-info">
+            <div class="audio-title" id="audio-label">Listen to Guidance</div>
+            <div class="audio-sub" id="audio-sub">Tap to hear your cosmic essence</div>
+          </div>
+          <div class="speed-chip" id="speed-chip" onclick="cycleSpeed()">1x</div>
+        </div>
+        <!-- Waveform bars -->
+        <div class="waveform" style="margin-bottom:14px">
+          <div class="wave-bar paused" id="wb1"></div>
+          <div class="wave-bar paused" id="wb2"></div>
+          <div class="wave-bar paused" id="wb3"></div>
+          <div class="wave-bar paused" id="wb4"></div>
+          <div class="wave-bar paused" id="wb5"></div>
+          <div class="wave-bar paused" id="wb6"></div>
+          <div class="wave-bar paused" id="wb7"></div>
+        </div>
+        <div class="audio-controls">
+          <button class="speed-btn" onclick="adjustSpeed(-1)">Slower</button>
+          <button class="speed-btn" onclick="adjustSpeed(1)">Faster</button>
+        </div>
+      </div>
+
+      <!-- Cosmic Essence -->
+      <div class="section-label-sm">THE COSMIC ESSENCE</div>
+      <div class="summary-card">
+        <div class="summary-header">
+          <div class="summary-icon"><span class="material-icons-round">auto_awesome</span></div>
+          <div class="summary-key-label">Key Insight</div>
+        </div>
+        <div class="summary-text" id="ad-summary">
+          Track your progress, stay consistent, and watch your life transform — one manifestation at a time. Your reality is a reflection of your most dominant thoughts and actions.
+        </div>
+      </div>
+
+      <!-- Task description -->
+      <div class="section-label-sm" style="margin-top:4px">WHAT TO DO</div>
+      <div class="desc-card">
+        <div class="desc-header">
+          <div class="desc-icon-wrap"><span class="material-icons-round">task_alt</span></div>
+          <div class="desc-label">Your Action</div>
+        </div>
+        <div class="desc-text" id="ad-desc">
+          Review your manifestation journal from the past week. Highlight 3 wins — no matter how small. Read them aloud and feel gratitude for each one. Then write one bold intention for the coming week with a clear deadline.
+        </div>
+      </div>
+
+    </div><!-- /ad-body -->
+  </div><!-- /phone -->
+</div>
+
+<script>
+  /* ═══ USER INFO LOGIC ══════════════════════════════════════ */
+  let uiStep = 0;
+  const UI_TOTAL = 4;
+
+  function uiRender() {
+    // Pages
+    for (let i = 0; i < UI_TOTAL; i++) {
+      const p = document.getElementById('ui-page-' + i);
+      if (!p) continue;
+      p.classList.remove('hidden-right','hidden-left');
+      if (i < uiStep)  p.classList.add('hidden-left');
+      if (i > uiStep)  p.classList.add('hidden-right');
+    }
+    // Progress
+    for (let i = 0; i < UI_TOTAL; i++) {
+      const s = document.getElementById('seg-' + i);
+      s.classList.toggle('done', i <= uiStep);
+    }
+    // Badge
+    document.getElementById('step-badge').textContent = `Step ${uiStep + 1} of 4`;
+    // Back
+    document.getElementById('ui-back').classList.toggle('invisible', uiStep === 0);
+    // Button label
+    document.getElementById('ui-continue-btn').textContent =
+      uiStep === UI_TOTAL - 1 ? 'Complete My Profile ✨' : 'Continue';
+  }
+
+  function uiNext() {
+    if (uiStep < UI_TOTAL - 1) {
+      uiStep++;
+      uiRender();
+    } else {
+      // final step done — flash success
+      const btn = document.getElementById('ui-continue-btn');
+      btn.textContent = '✓ Profile Complete!';
+      btn.style.background = 'linear-gradient(135deg,#4CAF50,#2E7D32)';
+      setTimeout(() => {
+        btn.textContent = 'Complete My Profile ✨';
+        btn.style.background = '';
+        uiStep = 0;
+        pinCode = '';
+        updatePin();
+        uiRender();
+      }, 2000);
+    }
+  }
+
+  function uiBack() {
+    if (uiStep > 0) { uiStep--; uiRender(); }
+  }
+
+  /* PIN logic */
+  let pinCode = '';
+  function pinKey(d) {
+    if (pinCode.length < 4) {
+      pinCode += d;
+      updatePin();
+    }
+  }
+  function pinDel() {
+    pinCode = pinCode.slice(0, -1);
+    updatePin();
+  }
+  function updatePin() {
+    for (let i = 0; i < 4; i++) {
+      const box = document.getElementById('p' + i);
+      const filled = i < pinCode.length;
+      box.textContent = filled ? '●' : '';
+      box.classList.toggle('filled', filled);
+    }
+  }
+
+  /* ═══ ACTION DETAIL LOGIC ══════════════════════════════════ */
+  let isPlaying = false;
+  const SPEEDS = ['0.5x','1x','1.5x','2x','2.5x'];
+  let speedIdx = 1;
+
+  function togglePlay() {
+    isPlaying = !isPlaying;
+    const icon  = document.getElementById('play-icon');
+    const label = document.getElementById('audio-label');
+    const sub   = document.getElementById('audio-sub');
+    const bars  = document.querySelectorAll('.wave-bar');
+
+    icon.textContent  = isPlaying ? 'pause' : 'play_arrow';
+    label.textContent = isPlaying ? '✦ Now Playing' : 'Listen to Guidance';
+    sub.textContent   = isPlaying ? 'Tap to stop your cosmic essence' : 'Tap to hear your cosmic essence';
+    bars.forEach(b => b.classList.toggle('paused', !isPlaying));
+  }
+
+  function cycleSpeed() {
+    speedIdx = (speedIdx + 1) % SPEEDS.length;
+    document.getElementById('speed-chip').textContent = SPEEDS[speedIdx];
+  }
+
+  function adjustSpeed(dir) {
+    speedIdx = Math.max(0, Math.min(SPEEDS.length - 1, speedIdx + dir));
+    document.getElementById('speed-chip').textContent = SPEEDS[speedIdx];
+  }
+</script>
+</body>
+</html>

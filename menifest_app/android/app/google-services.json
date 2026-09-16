@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "495398473758",
+    "project_id": "manifestapp-c0251",
+    "storage_bucket": "manifestapp-c0251.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:495398473758:android:2b33c1d1a7a931d288de0f",
+        "android_client_info": {
+          "package_name": "com.example.menifest_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBF5ZybZLsTSJxFISgCeQb9f6khsnPX97c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Manifest – Security Screen</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Material Icons for shield, cloud-off etc. -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:'Outfit',sans-serif;background:#f0ebff;
+      display:flex;align-items:center;justify-content:center;min-height:100vh}
+
+    /* ── Phone shell ─────────────────────────────────── */
+    .phone{
+      position:relative;width:390px;height:844px;
+      background:#FBF9FF;overflow:hidden;border-radius:44px;
+      box-shadow:0 32px 80px rgba(123,47,247,.2),0 0 0 1px rgba(123,47,247,.08);
+    }
+
+    /* ── Purple blob top-right ───────────────────────── */
+    .blob{
+      position:absolute;top:-100px;right:-60px;
+      width:350px;height:350px;border-radius:50%;
+      background:radial-gradient(circle,rgba(123,47,247,.08) 0%,transparent 70%);
+      pointer-events:none;
+    }
+
+    /* ── Scrollable body ─────────────────────────────── */
+    .body{
+      position:absolute;inset:0;
+      display:flex;flex-direction:column;align-items:center;
+      padding:0 30px;padding-top:80px;padding-bottom:48px;
+      overflow:hidden;
+    }
+
+    /* ── Icon cluster ────────────────────────────────── */
+    .icon-cluster{
+      position:relative;width:140px;height:140px;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+      /* glow shadow */
+      filter:drop-shadow(0 0 40px rgba(123,47,247,.12));
+      /* entry animation */
+      animation:fadeSlide 0.7s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    /* Concentric rings */
+    .ring{
+      position:absolute;border-radius:50%;
+      border:1px solid rgba(123,47,247,.08);
+    }
+    .ring:nth-child(1){width:140px;height:140px;border-color:rgba(123,47,247,.18)}
+    .ring:nth-child(2){width:116px;height:116px;border-color:rgba(123,47,247,.10)}
+
+    /* White card housing the icon */
+    .icon-card{
+      position:relative;z-index:2;
+      width:84px;height:84px;border-radius:24px;
+      background:#fff;
+      box-shadow:0 4px 10px rgba(0,0,0,.04);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .icon-card .material-icons-round{
+      font-size:48px;color:#7B2FF7;
+    }
+
+    /* ── Text block ──────────────────────────────────── */
+    .text-block{
+      margin-top:56px;width:100%;text-align:center;
+      animation:fadeSlide 0.7s cubic-bezier(.22,1,.36,1) .15s both;
+    }
+    .main-title{
+      font-size:28px;font-weight:900;line-height:1.1;
+      color:#1A1A2E;letter-spacing:-.5px;
+    }
+    .main-desc{
+      margin-top:20px;font-size:16px;color:#757585;
+      line-height:1.7;font-weight:400;
+    }
+
+    /* ── Security detail cards ───────────────────────── */
+    .cards{
+      margin-top:40px;width:100%;display:flex;flex-direction:column;gap:10px;
+      animation:fadeSlide 0.7s cubic-bezier(.22,1,.36,1) .3s both;
+    }
+    .card{
+      display:flex;align-items:center;gap:16px;
+      padding:16px;border-radius:20px;background:#fff;
+      border:1px solid rgba(123,47,247,.05);
+      box-shadow:0 2px 8px rgba(123,47,247,.04);
+    }
+    .card-icon{
+      width:44px;height:44px;border-radius:12px;flex-shrink:0;
+      background:rgba(123,47,247,.08);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .card-icon .material-icons-round{font-size:22px;color:#7B2FF7}
+    .card-text{}
+    .card-title{font-size:14px;font-weight:800;color:#1A1A2E}
+    .card-desc{font-size:12px;color:#9E9EAE;font-weight:400;margin-top:2px}
+
+    /* ── CTA button ──────────────────────────────────── */
+    .spacer{flex:1}
+    .cta-btn{
+      width:100%;padding:18px;border:none;border-radius:16px;cursor:pointer;
+      font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:#fff;
+      background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      box-shadow:0 6px 24px rgba(233,30,140,.35);
+      transition:transform .2s,box-shadow .2s;
+      animation:fadeSlide 0.7s cubic-bezier(.22,1,.36,1) .45s both;
+    }
+    .cta-btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 10px 32px rgba(233,30,140,.45);
+    }
+    .cta-btn:active{transform:translateY(0)}
+
+    /* ── Keyframes ───────────────────────────────────── */
+    @keyframes fadeSlide{
+      from{opacity:0;transform:translateY(20px)}
+      to  {opacity:1;transform:translateY(0)}
+    }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+  <!-- Decorative blob -->
+  <div class="blob"></div>
+
+  <div class="body">
+
+    <!-- Icon cluster with rings + shield -->
+    <div class="icon-cluster">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="icon-card">
+        <span class="material-icons-round">verified_user</span>
+      </div>
+    </div>
+
+    <!-- Title & description -->
+    <div class="text-block">
+      <div class="main-title">Your Privacy,<br>Guaranteed</div>
+      <div class="main-desc">
+        We believe transparency is key. Your data is encrypted locally and never shared.
+        We don't just say it—we build for it.
+      </div>
+    </div>
+
+    <!-- Security detail cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">
+          <span class="material-icons-round">shield</span>
+        </div>
+        <div class="card-text">
+          <div class="card-title">Vault-Level Protection</div>
+          <div class="card-desc">Military-grade encryption for all entries.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">
+          <span class="material-icons-round">cloud_off</span>
+        </div>
+        <div class="card-text">
+          <div class="card-title">Offline-First Privacy</div>
+          <div class="card-desc">Your thoughts stay on your device by default.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <!-- CTA -->
+    <button class="cta-btn">Enter My Safe Space</button>
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Manifest – Home Screen</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{
+      min-height:100vh;font-family:'Outfit',sans-serif;
+      background:linear-gradient(135deg,#f3eeff 0%,#ffeef7 100%);
+      display:flex;align-items:flex-start;justify-content:center;
+      padding:24px 0 40px;
+    }
+
+    /* ── Phone shell ───────────────────────────────────────────── */
+    .phone{
+      width:390px;min-height:844px;background:#ffffff;
+      border-radius:44px;overflow:hidden;position:relative;
+      box-shadow:0 32px 80px rgba(123,47,247,.2),0 0 0 1px rgba(123,47,247,.08);
+    }
+
+    /* ── Decorative blobs ──────────────────────────────────────── */
+    .blob{position:absolute;border-radius:50%;pointer-events:none}
+    .blob-1{
+      width:350px;height:350px;top:-100px;right:-80px;
+      background:radial-gradient(circle,rgba(123,47,247,.08) 0%,transparent 70%);
+    }
+    .blob-2{
+      width:300px;height:300px;top:150px;left:-120px;
+      background:radial-gradient(circle,rgba(233,30,140,.06) 0%,transparent 70%);
+    }
+
+    /* ── Scrollable body ───────────────────────────────────────── */
+    .body{
+      position:relative;z-index:1;height:100%;
+      overflow-y:auto;scrollbar-width:none;
+      padding:52px 24px 40px;
+    }
+    .body::-webkit-scrollbar{display:none}
+
+    /* ── Header row ────────────────────────────────────────────── */
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+    .header-left{}
+    .eyebrow{
+      font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+      color:#7B2FF7;
+    }
+    .page-title{
+      font-size:26px;font-weight:900;color:#1A1A2E;margin-top:2px;
+    }
+    .avatar{
+      width:48px;height:48px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,#d4b8ff,#ffb3e0);
+      border:1.5px solid #EEE5FF;
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;cursor:pointer;
+      box-shadow:0 2px 8px rgba(123,47,247,.12);
+    }
+
+    /* ── Hero banner card ──────────────────────────────────────── */
+    .hero-card{
+      width:100%;border-radius:24px;overflow:hidden;position:relative;
+      background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      padding:20px;margin-bottom:22px;
+    }
+    .hero-blob1{
+      position:absolute;right:-30px;top:-30px;
+      width:120px;height:120px;border-radius:50%;
+      background:rgba(255,255,255,.1);
+    }
+    .hero-blob2{
+      position:absolute;left:-20px;bottom:-20px;
+      width:80px;height:80px;border-radius:50%;
+      background:rgba(255,255,255,.1);
+    }
+    .hero-badge{
+      display:inline-block;padding:5px 12px;border-radius:20px;
+      background:rgba(255,255,255,.2);
+      font-size:10px;font-weight:800;letter-spacing:1.5px;color:#fff;
+      margin-bottom:16px;position:relative;z-index:1;
+    }
+    .hero-title{
+      font-size:24px;font-weight:900;color:#fff;line-height:1.2;
+      margin-bottom:12px;position:relative;z-index:1;
+    }
+    .hero-desc{
+      font-size:14px;color:rgba(255,255,255,.9);line-height:1.5;
+      position:relative;z-index:1;
+    }
+
+    /* ── Dream input box ───────────────────────────────────────── */
+    .input-wrap{
+      border-radius:20px;border:1px solid #EEE5FF;
+      background:#F8F4FF;margin-bottom:0;
+      transition:border-color .3s,box-shadow .3s;
+    }
+    .input-wrap:focus-within{
+      border-color:#E91E8C;border-width:1.5px;
+      box-shadow:0 4px 16px rgba(233,30,140,.15);
+    }
+    .dream-input{
+      width:100%;min-height:130px;resize:none;
+      border:none;background:transparent;outline:none;
+      font-family:'Outfit',sans-serif;font-size:14px;font-weight:500;
+      color:#1A1A2E;line-height:1.6;
+      padding:20px;border-radius:16px;
+    }
+    .dream-input::placeholder{color:#BBB0CC;font-weight:400}
+
+    /* ── Action button ─────────────────────────────────────────── */
+    .action-btn{
+      width:100%;padding:18px;border:none;border-radius:16px;cursor:pointer;
+      font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:#fff;
+      background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+      box-shadow:0 6px 24px rgba(233,30,140,.35);
+      margin-top:20px;
+      transition:transform .2s,box-shadow .2s,opacity .3s;
+      display:none;
+    }
+    .action-btn.visible{display:block}
+    .action-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(233,30,140,.45)}
+    .action-btn:active{transform:translateY(0)}
+
+    /* Loading spinner inside button */
+    .btn-spinner{
+      display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.4);
+      border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
+      vertical-align:middle;margin-right:8px;
+    }
+
+    /* ── Warning/info card ─────────────────────────────────────── */
+    .warn-card{
+      width:100%;padding:20px;border-radius:20px;margin-top:24px;
+      background:#FFF8E1;border:1.5px solid #FFCC02;
+      box-shadow:0 4px 12px rgba(255,204,2,.15);
+      display:none;
+      animation:fadeIn .4s ease both;
+    }
+    .warn-card.visible{display:block}
+    .warn-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .warn-icon{
+      width:36px;height:36px;border-radius:50%;flex-shrink:0;
+      background:rgba(255,204,2,.2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:18px;
+    }
+    .warn-title{font-size:14px;font-weight:800;color:#7A5800}
+    .warn-body{font-size:14px;color:#5C4000;line-height:1.6}
+    .warn-tip{
+      margin-top:12px;padding:10px 14px;border-radius:12px;
+      background:rgba(255,204,2,.15);
+      font-size:13px;color:#7A5800;line-height:1.5;
+    }
+
+    /* ── Cosmic roadmap section ────────────────────────────────── */
+    .section{display:none;margin-top:40px;animation:fadeIn .5s ease both}
+    .section.visible{display:block}
+    .section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+    .accent-bar{
+      width:4px;height:24px;border-radius:2px;flex-shrink:0;
+      background:linear-gradient(to bottom,#7B2FF7,#E91E8C);
+    }
+    .section-title{font-size:22px;font-weight:900;color:#1A1A2E}
+
+    /* ── Action cards ──────────────────────────────────────────── */
+    .action-card{
+      display:flex;align-items:center;gap:20px;
+      padding:20px;border-radius:24px;background:#fff;
+      border:1px solid #F3EEFF;cursor:pointer;margin-bottom:16px;
+      box-shadow:0 4px 10px rgba(123,47,247,.05);
+      transition:transform .2s,box-shadow .2s;
+      animation:fadeIn .4s ease both;
+    }
+    .action-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(123,47,247,.1)}
+    .action-card:active{transform:translateY(0)}
+    .card-num{
+      width:50px;height:50px;border-radius:16px;flex-shrink:0;
+      background:rgba(123,47,247,.1);
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;font-weight:900;color:#7B2FF7;
+    }
+    .card-body{flex:1}
+    .card-title-text{font-size:15px;font-weight:900;color:#1A1A2E;line-height:1.3}
+    .card-sub{font-size:12px;color:#757585;margin-top:3px}
+    .card-arrow .material-icons-round{font-size:16px;color:#BBB0CC}
+
+    /* ── Keyframes ─────────────────────────────────────────────── */
+    @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+  </style>
+</head>
+<body>
+
+<div class="phone">
+  <!-- decorative blobs -->
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <div class="body">
+
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <div class="header">
+      <div class="header-left">
+        <div class="eyebrow">WELCOME BACK</div>
+        <div class="page-title">Your Journey ✨</div>
+      </div>
+      <div class="avatar">🌟</div>
+    </div>
+
+    <!-- ── Hero card ──────────────────────────────────────── -->
+    <div class="hero-card">
+      <div class="hero-blob1"></div>
+      <div class="hero-blob2"></div>
+      <div class="hero-badge">MANIFEST TODAY</div>
+      <div class="hero-title">What will you<br>create today?</div>
+      <div class="hero-desc">Describe your vision clearly. The universe is listening and ready to help you plan.</div>
+    </div>
+
+    <!-- ── Dream input ─────────────────────────────────────── -->
+    <div class="input-wrap">
+      <textarea
+        id="dream-input"
+        class="dream-input"
+        placeholder="E.g., I want to become a successful entrepreneur and build my own startup that helps people..."
+        oninput="handleInput()"
+      ></textarea>
+    </div>
+
+    <!-- ── Get Action Plan button ──────────────────────────── -->
+    <button class="action-btn" id="action-btn" onclick="generatePlan()">
+      Get My Action Plan ✨
+    </button>
+
+    <!-- ── Warning card (shown for invalid input) ─────────── -->
+    <div class="warn-card" id="warn-card">
+      <div class="warn-header">
+        <div class="warn-icon">💡</div>
+        <div class="warn-title">Not a valid manifestation goal</div>
+      </div>
+      <div class="warn-body" id="warn-body"></div>
+      <div class="warn-tip" id="warn-tip"></div>
+    </div>
+
+    <!-- ── Cosmic Roadmap section ─────────────────────────── -->
+    <div class="section" id="roadmap-section">
+      <div class="section-header">
+        <div class="accent-bar"></div>
+        <div class="section-title">Your Cosmic Roadmap</div>
+      </div>
+      <div id="cards-container"></div>
+    </div>
+
+  </div><!-- /body -->
+</div><!-- /phone -->
+
+<script>
+  // ── Sample action plan data (mirrors real AI output structure) ──────────
+  const SAMPLE_PLANS = [
+    [
+      { num:1, title:"Clarify Your Vision",      sub:"Define your dream in crystal-clear terms so the universe knows exactly what to deliver." },
+      { num:2, title:"Build Daily Rituals",       sub:"Anchor your manifestation with morning affirmations and a 5-minute visualisation routine." },
+      { num:3, title:"Take Aligned Action",       sub:"Identify the single most important step you can do TODAY to move toward your goal." },
+      { num:4, title:"Release & Trust",            sub:"Let go of the 'how'. Trust the process and celebrate every small win along the way." },
+      { num:5, title:"Track Your Progress",        sub:"Keep a manifestation journal — evidence builds belief and accelerates results." },
+    ],
+    [
+      { num:1, title:"Set Your Intention",         sub:"Write a clear, positive present-tense statement about what you are calling in." },
+      { num:2, title:"Visualise Daily",             sub:"Spend 10 minutes each morning feeling your goal as already achieved." },
+      { num:3, title:"Remove Limiting Beliefs",    sub:"Identify and rewrite the inner stories that are blocking your abundance." },
+      { num:4, title:"Act As If",                  sub:"Make one decision today that your future self — who already has this — would make." },
+      { num:5, title:"Gratitude Amplifier",         sub:"Write 3 things you are grateful for each night to raise your energetic frequency." },
+    ]
+  ];
+
+  let inputTimeout = null;
+  let planIndex = 0;
+
+  function handleInput() {
+    const val = document.getElementById('dream-input').value.trim();
+    const btn = document.getElementById('action-btn');
+
+    // hide previous results on new typing
+    hideResults();
+
+    clearTimeout(inputTimeout);
+    if (val.length > 0) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  }
+
+  function generatePlan() {
+    const val = document.getElementById('dream-input').value.trim();
+    if (!val) return;
+
+    const btn = document.getElementById('action-btn');
+
+    // ── Loading state ──────────────────────────────────────────────
+    btn.innerHTML = '<span class="btn-spinner"></span> Manifesting…';
+    btn.disabled = true;
+    btn.style.opacity = '0.85';
+    hideResults();
+
+    setTimeout(() => {
+      btn.innerHTML = 'Get My Action Plan ✨';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+
+      // simulate validation — show warning for very short inputs
+      if (val.length < 12) {
+        showWarning(
+          'Your goal is too vague for the universe to act on.',
+          '💡 Try being more specific — mention who you want to become, what you want to achieve, or how your life will look.'
+        );
+        return;
+      }
+
+      showRoadmap(SAMPLE_PLANS[planIndex % SAMPLE_PLANS.length]);
+      planIndex++;
+      btn.classList.remove('visible');
+    }, 1800);
+  }
+
+  function showWarning(body, tip) {
+    document.getElementById('warn-body').textContent = body;
+    document.getElementById('warn-tip').textContent = tip;
+    document.getElementById('warn-card').classList.add('visible');
+  }
+
+  function showRoadmap(cards) {
+    const container = document.getElementById('cards-container');
+    container.innerHTML = '';
+    cards.forEach((c, i) => {
+      const el = document.createElement('div');
+      el.className = 'action-card';
+      el.style.animationDelay = (i * 0.08) + 's';
+      el.innerHTML = `
+        <div class="card-num">${c.num}</div>
+        <div class="card-body">
+          <div class="card-title-text">${c.title}</div>
+          <div class="card-sub">${c.sub}</div>
+        </div>
+        <div class="card-arrow"><span class="material-icons-round">arrow_forward_ios</span></div>
+      `;
+      el.addEventListener('click', () => openDetail(c));
+      container.appendChild(el);
+    });
+    document.getElementById('roadmap-section').classList.add('visible');
+  }
+
+  function hideResults() {
+    document.getElementById('warn-card').classList.remove('visible');
+    document.getElementById('roadmap-section').classList.remove('visible');
+    document.getElementById('cards-container').innerHTML = '';
+  }
+
+  function openDetail(card) {
+    // Simple inline detail overlay
+    let overlay = document.getElementById('detail-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'detail-overlay';
+      overlay.style.cssText = `
+        position:fixed;inset:0;background:rgba(26,26,46,.5);backdrop-filter:blur(4px);
+        z-index:999;display:flex;align-items:flex-end;justify-content:center;
+        animation:fadeIn .2s ease;
+      `;
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+      <div style="
+        width:390px;background:#fff;border-radius:32px 32px 0 0;
+        padding:32px 28px 48px;
+        animation:slideUp .35s cubic-bezier(.22,1,.36,1) both;
+      ">
+        <div style="width:40px;height:4px;border-radius:2px;background:#EEE5FF;margin:0 auto 28px;"></div>
+        <div style="width:54px;height:54px;border-radius:16px;background:rgba(123,47,247,.1);
+          display:flex;align-items:center;justify-content:center;
+          font-size:22px;font-weight:900;color:#7B2FF7;margin-bottom:20px;">
+          ${card.num}
+        </div>
+        <div style="font-size:22px;font-weight:900;color:#1A1A2E;margin-bottom:12px;">${card.title}</div>
+        <div style="font-size:15px;color:#757585;line-height:1.7;">${card.sub}</div>
+        <button onclick="document.getElementById('detail-overlay').remove()" style="
+          width:100%;margin-top:32px;padding:18px;border:none;border-radius:16px;cursor:pointer;
+          font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:#fff;
+          background:linear-gradient(135deg,#7B2FF7,#E91E8C);
+          box-shadow:0 6px 24px rgba(233,30,140,.35);
+        ">Got it ✨</button>
+      </div>
+    `;
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.remove();
+    });
+  }
+</script>
+
+<style>
+  @keyframes slideUp{
+    from{transform:translateY(100%)}
+    to{transform:translateY(0)}
+  }
+</style>
+
+</body>
+</html>
