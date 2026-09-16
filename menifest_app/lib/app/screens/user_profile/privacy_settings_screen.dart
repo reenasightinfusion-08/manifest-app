@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/common/core.dart';
+import '../security/change_passphrase_screen.dart';
 
 class PrivacySettingsScreen extends StatefulWidget {
   const PrivacySettingsScreen({super.key});
@@ -216,7 +217,12 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         iconColor: AppColors.blue,
                         title: 'Change Passphrase',
                         subtitle: 'Update your cosmic security key',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangePassphraseScreen(),
+                          ),
+                        ),
                       ),
                     ],
                   ),
