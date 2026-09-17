@@ -163,145 +163,289 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.topLeft,
-              child: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _saving ? null : () => Navigator.pop(context),
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: EdgeInsets.all(24.r),
+      backgroundColor: AppColors.surfaceVeryLight,
+      body: Stack(
+        children: [
+          // ── Decorative glow blobs, matching the onboarding security screen ──
+          Positioned(
+            top: -100.h,
+            right: -60.w,
+            child: Container(
+              width: 320.w,
+              height: 320.w,
               decoration: BoxDecoration(
-                color: _error
-                    ? AppColors.errorRed.withValues(alpha: 0.1)
-                    : AppColors.blue.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _error ? Icons.lock_open_rounded : Icons.key_rounded,
-                size: 60.sp,
-                color: _error ? AppColors.errorRed : AppColors.blue,
-              ),
-            ),
-            32.verticalSpace,
-            Text(
-              _title,
-              style: AppTextStyles.headingMedium.copyWith(
-                fontWeight: FontWeight.w900,
-                color: AppColors.textDark,
-              ),
-            ),
-            12.verticalSpace,
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40.w),
-              child: Text(
-                _subtitle,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: _error ? AppColors.errorRed : AppColors.textGrey,
+                gradient: RadialGradient(
+                  colors: [
+                    (_error ? AppColors.errorRed : AppColors.purple)
+                        .withValues(alpha: 0.08),
+                    AppColors.transparent,
+                  ],
                 ),
               ),
             ),
-            40.verticalSpace,
-            GestureDetector(
-              onTap: _saving ? null : () => _focusNode.requestFocus(),
-              behavior: HitTestBehavior.opaque,
-              child: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _controller,
-                builder: (context, value, _) {
-                  final String enteredText = value.text;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(4, (index) {
-                      final bool filled = enteredText.length > index;
-
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: EdgeInsets.symmetric(horizontal: 10.w),
-                        width: 50.w,
-                        height: 60.h,
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: _error
-                                ? AppColors.errorRed
-                                : (filled
-                                    ? AppColors.blue
-                                    : AppColors.borderVeryLight),
-                            width: (filled || _error) ? 2.w : 1.w,
-                          ),
-                          boxShadow: filled
-                              ? [
-                                  BoxShadow(
-                                    color:
-                                        AppColors.blue.withValues(alpha: 0.1),
-                                    blurRadius: 10.r,
-                                    spreadRadius: 2.r,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Center(
-                          child: Text(
-                            filled ? '●' : '',
-                            style: TextStyle(
-                              fontSize: 24.sp,
-                              color:
-                                  _error ? AppColors.errorRed : AppColors.blue,
+          ),
+          Positioned(
+            bottom: -80.h,
+            left: -60.w,
+            child: Container(
+              width: 260.w,
+              height: 260.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.pink.withValues(alpha: 0.06),
+                    AppColors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textDark,
+                    ),
+                    onPressed: _saving ? null : () => Navigator.pop(context),
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 30.w),
+                      child: Column(
+                        children: [
+                          16.verticalSpace,
+                          _BadgeIcon(error: _error),
+                          32.verticalSpace,
+                          Text(
+                            _title,
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.headingLarge.copyWith(
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 26.sp,
                             ),
                           ),
-                        ),
-                      );
-                    }),
-                  );
-                },
-              ),
+                          12.verticalSpace,
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w),
+                            child: Text(
+                              _subtitle,
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: _error
+                                    ? AppColors.errorRed
+                                    : AppColors.textGrey,
+                                height: 1.5,
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                          ),
+                          40.verticalSpace,
+                          GestureDetector(
+                            onTap: _saving
+                                ? null
+                                : () => _focusNode.requestFocus(),
+                            behavior: HitTestBehavior.opaque,
+                            child: ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: _controller,
+                              builder: (context, value, _) {
+                                final String enteredText = value.text;
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(4, (index) {
+                                    final bool filled =
+                                        enteredText.length > index;
+                                    return _PinDot(
+                                      filled: filled,
+                                      error: _error,
+                                    );
+                                  }),
+                                );
+                              },
+                            ),
+                          ),
+                          // Hidden TextField driving the PIN input
+                          SizedBox(
+                            height: 0,
+                            width: 0,
+                            child: TextField(
+                              focusNode: _focusNode,
+                              controller: _controller,
+                              enabled: !_saving,
+                              keyboardType: TextInputType.number,
+                              maxLength: 4,
+                              onChanged: (val) {
+                                if (val.length == 4) {
+                                  // Let the 4th dot render before clearing/advancing.
+                                  Future.delayed(
+                                    const Duration(milliseconds: 150),
+                                    () {
+                                      if (mounted) _onCodeEntered(val);
+                                    },
+                                  );
+                                }
+                              },
+                              decoration: const InputDecoration(
+                                counterText: "",
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          28.verticalSpace,
+                          if (_saving)
+                            SizedBox(
+                              width: 22.w,
+                              height: 22.w,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppColors.purple,
+                              ),
+                            )
+                          else
+                            _StepDots(step: _step),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(30.w, 0, 30.w, 24.h),
+                  child: Text(
+                    'PROTECTED BY COSMIC ENCRYPTION',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.textLightGrey,
+                      fontSize: 10.sp,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            // Hidden TextField driving the PIN input
-            SizedBox(
-              height: 0,
-              width: 0,
-              child: TextField(
-                focusNode: _focusNode,
-                controller: _controller,
-                enabled: !_saving,
-                keyboardType: TextInputType.number,
-                maxLength: 4,
-                onChanged: (val) {
-                  if (val.length == 4) {
-                    // Let the 4th dot render before clearing/advancing.
-                    Future.delayed(const Duration(milliseconds: 150), () {
-                      if (mounted) _onCodeEntered(val);
-                    });
-                  }
-                },
-                decoration: const InputDecoration(
-                  counterText: "",
-                  border: InputBorder.none,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeIcon extends StatelessWidget {
+  final bool error;
+
+  const _BadgeIcon({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 120.w,
+      height: 120.w,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: (error ? AppColors.errorRed : AppColors.purple)
+                      .withValues(alpha: 0.12),
+                  blurRadius: 36.r,
+                  spreadRadius: 8.r,
+                ),
+              ],
+            ),
+          ),
+          ...List.generate(2, (i) {
+            return Container(
+              margin: EdgeInsets.all((10.0 * (i + 1)).r),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: (error ? AppColors.errorRed : AppColors.purple)
+                      .withValues(alpha: 0.08 + (0.1 * i)),
+                  width: 1.w,
                 ),
               ),
-            ),
-            24.verticalSpace,
-            if (_saving)
-              SizedBox(
-                width: 22.w,
-                height: 22.w,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: AppColors.blue,
-                ),
+            );
+          }),
+          Container(
+            padding: EdgeInsets.all(24.r),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: error
+                    ? [AppColors.errorRed, AppColors.errorRed.withValues(alpha: 0.7)]
+                    : AppColors.primaryGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            const Spacer(flex: 2),
-            _StepDots(step: _step),
-            40.verticalSpace,
-          ],
+              borderRadius: BorderRadius.circular(28.r),
+              boxShadow: [
+                BoxShadow(
+                  color: (error ? AppColors.glowPurple : AppColors.glowPink)
+                      .withValues(alpha: 0.3),
+                  blurRadius: 16.r,
+                  offset: Offset(0, 8.h),
+                ),
+              ],
+            ),
+            child: Icon(
+              error ? Icons.lock_open_rounded : Icons.key_rounded,
+              size: 42.sp,
+              color: AppColors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PinDot extends StatelessWidget {
+  final bool filled;
+  final bool error;
+
+  const _PinDot({required this.filled, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color activeColor = error ? AppColors.errorRed : AppColors.purple;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: EdgeInsets.symmetric(horizontal: 10.w),
+      width: 54.w,
+      height: 62.h,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(
+          color: filled ? activeColor : AppColors.borderVeryLight,
+          width: (filled || error) ? 2.w : 1.w,
+        ),
+        boxShadow: filled
+            ? [
+                BoxShadow(
+                  color: activeColor.withValues(alpha: 0.1),
+                  blurRadius: 10.r,
+                  spreadRadius: 2.r,
+                ),
+              ]
+            : null,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.circle,
+          size: 10.sp,
+          color: filled ? activeColor : AppColors.transparent,
         ),
       ),
     );
@@ -323,10 +467,13 @@ class _StepDots extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: EdgeInsets.symmetric(horizontal: 4.w),
-          width: active ? 20.w : 6.w,
+          width: active ? 22.w : 6.w,
           height: 6.w,
           decoration: BoxDecoration(
-            color: active ? AppColors.blue : AppColors.stepDotInactive,
+            gradient: active
+                ? LinearGradient(colors: AppColors.primaryGradient)
+                : null,
+            color: active ? null : AppColors.stepDotInactive,
             borderRadius: BorderRadius.circular(3.r),
           ),
         );

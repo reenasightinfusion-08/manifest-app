@@ -181,6 +181,38 @@ class ApiService {
     }
   }
 
+  Future<bool> deleteAllManifestations(String userId) async {
+    try {
+      final response = await _dio.delete('/api/history/$userId');
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      if (e is DioException) {
+        String? serverMessage;
+        if (e.response?.data != null && e.response?.data is Map) {
+          serverMessage = e.response?.data['message'] ?? e.response?.data['error'];
+        }
+        throw Exception('Failed to clear manifestations: ${serverMessage ?? e.message}');
+      }
+      throw Exception('Failed to clear manifestations: $e');
+    }
+  }
+
+  Future<bool> deleteAccount(String userId) async {
+    try {
+      final response = await _dio.delete('/api/users/$userId');
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      if (e is DioException) {
+        String? serverMessage;
+        if (e.response?.data != null && e.response?.data is Map) {
+          serverMessage = e.response?.data['message'] ?? e.response?.data['error'];
+        }
+        throw Exception('Failed to delete account: ${serverMessage ?? e.message}');
+      }
+      throw Exception('Failed to delete account: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> generateArchetype(String userId) async {
     try {
       final response = await _dio.post(

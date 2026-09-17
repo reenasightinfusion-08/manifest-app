@@ -342,6 +342,20 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> deleteAccount() async {
+    if (_userId == null || _userId!.isEmpty) return false;
+    try {
+      final success = await _apiService.deleteAccount(_userId!);
+      if (success) {
+        await logout();
+      }
+      return success;
+    } catch (e) {
+      debugPrint('Delete account error: $e');
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

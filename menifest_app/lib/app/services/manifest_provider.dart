@@ -157,6 +157,24 @@ class ManifestProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> deleteAllHistory(String userId) async {
+    try {
+      final success = await _apiService.deleteAllManifestations(userId);
+      if (success) {
+        _history = [];
+        _currentPlan = null;
+        _actionCards = [];
+        _fullAi = null;
+        _activeGoal = '';
+        notifyListeners();
+      }
+      return success;
+    } catch (e) {
+      debugPrint('Delete all history error: $e');
+      rethrow;
+    }
+  }
+
   void clearPlan() {
     _currentPlan = null;
     _actionCards = [];

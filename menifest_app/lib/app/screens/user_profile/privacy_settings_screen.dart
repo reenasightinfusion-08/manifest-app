@@ -1,6 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/common/core.dart';
+import '../../services/api_service.dart';
+import '../../services/manifest_provider.dart';
+import '../../services/user_provider.dart';
 import '../security/change_passphrase_screen.dart';
 
 class PrivacySettingsScreen extends StatefulWidget {
@@ -243,23 +252,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         iconColor: AppColors.textGrey,
                         title: 'Export My Data',
                         subtitle: 'Download a copy of all your manifestations',
-                        onTap: () => _showComingSoon(context),
-                      ),
-                      _Divider(),
-                      _ActionTile(
-                        icon: Icons.history_rounded,
-                        iconColor: AppColors.textGrey,
-                        title: 'Clear Search History',
-                        subtitle: 'Remove all previously searched goals',
-                        onTap: () => _confirmAction(
-                          context,
-                          title: 'Clear History?',
-                          message:
-                              'This will remove all your local search history. Your manifestations in the cosmos remain safe.',
-                          confirmLabel: 'Clear',
-                          onConfirm: () =>
-                              _showToast(context, 'Search history cleared ✨'),
-                        ),
+                        onTap: () => _exportMyData(context),
                       ),
                     ],
                   ),
@@ -311,10 +304,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                             message:
                                 'This will permanently delete all your manifestations, plans, and vision board. This cannot be undone.',
                             confirmLabel: 'Delete All',
-                            onConfirm: () => _showToast(
-                              context,
-                              'All manifestations deleted',
-                            ),
+                            onConfirm: () => _deleteAllManifestations(context),
                             isDangerous: true,
                           ),
                         ),
@@ -329,10 +319,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                             message:
                                 'Your entire cosmic profile, manifestations, and archetype will be permanently destroyed. Are you absolutely sure?',
                             confirmLabel: 'Delete Account',
-                            onConfirm: () => _showToast(
-                              context,
-                              'Account deletion requested',
-                            ),
+                            onConfirm: () => _deleteAccount(context),
                             isDangerous: true,
                           ),
                         ),
@@ -365,8 +352,141 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     );
   }
 
-  void _showComingSoon(BuildContext context) {
-    _showToast(context, 'Coming soon! ✨');
+  Future<void> _exportMyData(BuildContext context) async {
+    final userProvider = context.read<UserProvider>();
+    final userId = userProvider.userId;
+    if (userId == null || userId.isEmpty) {
+      _showToast(context, 'You need to be signed in to do this.');
+      return;
+    }
+
+    _showLoadingDialog(context);
+    try {
+      final apiService = ApiService();
+      final history = await apiService.getManifestationHistory(userId);
+      final archetype = userProvider.archetypeData;
+
+      final export = <String, dynamic>{
+        'exported_at': DateTime.now().toIso8601String(),
+        'profile': {
+          'id': userId,
+          'name': userProvider.name,
+          'avatar_url': userProvider.profileImage,
+          'personal_answers': userProvider.personalAnswers,
+          'family_answers': userProvider.familyAnswers,
+          'professional_answers': userProvider.professionalAnswers,
+        },
+        'spiritual_archetype': archetype,
+        'manifestations': history,
+      };
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert(export);
+
+      final dir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${dir.path}/manifest_data_export_$timestamp.json');
+      await file.writeAsString(jsonString);
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loading dialog
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'My Manifest Data Export',
+        text: 'Here\'s a full copy of your manifestations and profile data.',
+      );
+    } catch (e, st) {
+      debugPrint('EXPORT ERROR: $e');
+      debugPrint('EXPORT STACK: $st');
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loading dialog
+      _showToast(context, 'Could not export your data. Try again.');
+    }
+  }
+
+  Future<void> _deleteAllManifestations(BuildContext context) async {
+    final userId = context.read<UserProvider>().userId;
+    if (userId == null || userId.isEmpty) {
+      _showToast(context, 'You need to be signed in to do this.');
+      return;
+    }
+
+    _showLoadingDialog(context);
+    try {
+      await context.read<ManifestProvider>().deleteAllHistory(userId);
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loading dialog
+      _showToast(context, 'All manifestations deleted ✨');
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loading dialog
+      _showToast(context, 'Could not clear manifestations. Try again.');
+    }
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final userProvider = context.read<UserProvider>();
+    final manifestProvider = context.read<ManifestProvider>();
+
+    _showLoadingDialog(context);
+    try {
+      final success = await userProvider.deleteAccount();
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loading dialog
+
+      if (success) {
+        manifestProvider.resetForLogout();
+        if (!context.mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.welcome,
+          (route) => false,
+        );
+      } else {
+        _showToast(context, 'Could not delete your account. Try again.');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss loading dialog
+      _showToast(context, 'Could not delete your account. Try again.');
+    }
+  }
+
+  void _showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        backgroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24.r),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(28.r),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 22.w,
+                height: 22.w,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.errorRed,
+                ),
+              ),
+              16.horizontalSpace,
+              Text(
+                'Working on it...',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
 
@@ -574,7 +694,7 @@ class _ToggleTile extends StatelessWidget {
               HapticFeedback.selectionClick();
               onChanged(v);
             },
-            activeColor: AppColors.white,
+            activeThumbColor: AppColors.white,
             activeTrackColor: AppColors.purple,
             inactiveThumbColor: AppColors.white,
             inactiveTrackColor: AppColors.borderLight,

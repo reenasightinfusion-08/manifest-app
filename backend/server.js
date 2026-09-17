@@ -548,6 +548,109 @@ app.delete('/api/manifestations/:id', async (req, res) => {
   }
 });
 
+// ─── Delete ALL Manifestations For A User (Permanent) ─────────────────────
+app.delete('/api/history/:userId', async (req, res) => {
+  const { userId } = req.params;
+  console.log(`[DELETE ALL] Wiping manifestations for user: ${userId}`);
+
+  try {
+    const { data: manifestations, error: fetchError } = await supabase
+      .from('manifestations')
+      .select('id')
+      .eq('user_id', userId);
+
+    if (fetchError) throw fetchError;
+
+    const manIds = (manifestations || []).map(m => m.id);
+
+    if (manIds.length > 0) {
+      const { data: plans } = await supabase
+        .from('manifestation_plans')
+        .select('id')
+        .in('manifestation_id', manIds);
+
+      const planIds = (plans || []).map(p => p.id);
+
+      if (planIds.length > 0) {
+        await supabase.from('daily_tasks').delete().in('plan_id', planIds);
+      }
+
+      await supabase.from('manifestation_plans').delete().in('manifestation_id', manIds);
+      await supabase.from('manifestations').delete().in('id', manIds);
+    }
+
+    console.log(`[DELETE ALL] ✅ Removed ${manIds.length} manifestation(s) for user ${userId}.`);
+    res.json({ success: true, message: 'All manifestations permanently removed.', count: manIds.length });
+  } catch (error) {
+    console.error('[DELETE ALL ERROR DETAILS]:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
+    res.status(500).json({
+      success: false,
+      message: `Failed to clear manifestations: ${error.message || 'Unknown Error'}`,
+      error: error.message,
+      code: error.code
+    });
+  }
+});
+
+// ─── Delete Account (Permanent) ────────────────────────────────────────────
+app.delete('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`[DELETE ACCOUNT] Wiping user: ${id}`);
+
+  try {
+    // 1. Wipe every manifestation (and its plans/tasks) owned by this user.
+    const { data: manifestations, error: fetchError } = await supabase
+      .from('manifestations')
+      .select('id')
+      .eq('user_id', id);
+
+    if (fetchError) throw fetchError;
+
+    const manIds = (manifestations || []).map(m => m.id);
+
+    if (manIds.length > 0) {
+      const { data: plans } = await supabase
+        .from('manifestation_plans')
+        .select('id')
+        .in('manifestation_id', manIds);
+
+      const planIds = (plans || []).map(p => p.id);
+
+      if (planIds.length > 0) {
+        await supabase.from('daily_tasks').delete().in('plan_id', planIds);
+      }
+
+      await supabase.from('manifestation_plans').delete().in('manifestation_id', manIds);
+      await supabase.from('manifestations').delete().in('id', manIds);
+    }
+
+    // 2. Wipe the user profile itself.
+    const { error: userError } = await supabase.from('users').delete().eq('id', id);
+    if (userError) throw userError;
+
+    console.log(`[DELETE ACCOUNT] ✅ Account ${id} permanently destroyed.`);
+    res.json({ success: true, message: 'Account permanently deleted.' });
+  } catch (error) {
+    console.error('[DELETE ACCOUNT ERROR DETAILS]:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
+    res.status(500).json({
+      success: false,
+      message: `Failed to delete account: ${error.message || 'Unknown Error'}`,
+      error: error.message,
+      code: error.code
+    });
+  }
+});
+
 if (process.env.VERCEL !== '1') {
   app.listen(port, () => {
     console.log(`🚀 Backend listening at http://localhost:${port}`);

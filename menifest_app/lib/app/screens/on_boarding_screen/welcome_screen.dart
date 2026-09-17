@@ -193,6 +193,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
+      // The "Recover Identity" dialog opens a keyboard for its own text
+      // fields; without this, this screen's Scaffold behind the dialog
+      // also resizes for that keyboard and its fixed-height content
+      // (image circle, text, button) overflows at the bottom.
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned.fill(

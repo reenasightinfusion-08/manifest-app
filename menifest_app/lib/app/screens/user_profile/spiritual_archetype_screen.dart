@@ -498,13 +498,11 @@ class _VisionCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Expanded(
-        child: Text(
-          text,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textGrey,
-            fontStyle: FontStyle.italic,
-          ),
+      child: Text(
+        text,
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textGrey,
+          fontStyle: FontStyle.italic,
         ),
       ),
     );
