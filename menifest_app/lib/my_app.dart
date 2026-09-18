@@ -105,6 +105,48 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _armIdleTimer();
   }
 
+  /// Single entry point for every touch in the app, wired to the [Listener]
+  /// wrapping [MaterialApp] below.
+  ///
+  /// A [Listener] is used here rather than a [GestureDetector] on purpose:
+  /// it reports raw pointer events without entering the gesture arena, so
+  /// it still fires when a button, [InkWell] or [GestureDetector] claims
+  /// the tap. A root [GestureDetector] would lose that arena to the button
+  /// and never run — which is why tapping a button used to leave the
+  /// keyboard open.
+  void _handleGlobalPointerDown(PointerDownEvent event) {
+    _armIdleTimer();
+    _dismissKeyboardOnTapOutsideField(event.position);
+  }
+
+  /// Closes the on-screen keyboard whenever the user touches anything other
+  /// than the text field that currently holds focus — a button, a card, a
+  /// list, or blank space.
+  ///
+  /// The bounds check is what keeps ordinary editing intact: a tap inside
+  /// the focused field (to reposition the caret or select text) has to
+  /// leave the keyboard up. Moving between two fields still works too,
+  /// since the newly tapped field requests focus in the same frame the old
+  /// one gives it up, so the keyboard never actually drops.
+  void _dismissKeyboardOnTapOutsideField(Offset tapPosition) {
+    final focusedNode = FocusManager.instance.primaryFocus;
+    final focusedContext = focusedNode?.context;
+    if (focusedNode == null || focusedContext == null) return;
+
+    final renderObject = focusedContext.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.attached ||
+        !renderObject.hasSize) {
+      return;
+    }
+
+    final fieldBounds =
+        renderObject.localToGlobal(Offset.zero) & renderObject.size;
+    if (fieldBounds.contains(tapPosition)) return;
+
+    focusedNode.unfocus();
+  }
+
   bool get _canAutoLock {
     final context = _navigatorKey.currentContext;
     if (context == null) return false;
@@ -174,11 +216,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         splitScreenMode: true,
         builder: (_, child) {
           return Listener(
-            // Any touch anywhere in the app restarts the 1-minute idle
-            // clock. behavior: translucent so it sees the tap even where
-            // nothing else claims it (e.g. blank background areas).
+            // Any touch anywhere in the app restarts the idle clock and
+            // dismisses the keyboard. behavior: translucent so it sees the
+            // tap even where nothing else claims it (e.g. blank background
+            // areas).
             behavior: HitTestBehavior.translucent,
-            onPointerDown: (_) => _armIdleTimer(),
+            onPointerDown: _handleGlobalPointerDown,
             child: MaterialApp(
               navigatorKey: _navigatorKey,
               navigatorObservers: [_routeObserver],

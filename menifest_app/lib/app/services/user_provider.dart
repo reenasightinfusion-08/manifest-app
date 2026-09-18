@@ -242,27 +242,27 @@ class UserProvider with ChangeNotifier {
 
   // ── Default Autofill Answers ───────────────────────────────────────────────
   static const List<String> defaultPersonalAnswers = [
-    '', // Name: intentionally empty for user input
-    '25',
-    'Mumbai, India',
-    'Health, peace, and personal growth',
-    'Waking up early, meditating, working on creative goals, and spending time with loved ones.',
+    '',
+    '',
+    '',
+    '',
+    '',
   ];
 
   static const List<String> defaultFamilyAnswers = [
-    'Married',
-    'Yes, 2 kids',
-    'A happy, united home and traveling together',
-    'Deepening mutual understanding and quality time',
-    'Unconditional love, trust, and mutual respect',
+    '',
+    '',
+    '',
+    '',
+    '',
   ];
 
   static const List<String> defaultProfessionalAnswers = [
-    'Software Engineer',
-    'Scale high-impact projects and lead innovation',
-    'Leadership, system design, and AI technologies',
-    'Financial independence to create freely without stress',
-    'Leading a successful global technology enterprise',
+    '',
+    '',
+    '',
+    '',
+    '',
   ];
 
   // ── Onboarding Survey Answers ──────────────────────────────────────────────
