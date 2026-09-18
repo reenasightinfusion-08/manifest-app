@@ -34,14 +34,14 @@ class _PasscodeVerificationScreenState
     super.dispose();
   }
 
-  void _verify(String enteredCode) {
+  void _verify() {
     final provider = context.read<UserProvider>();
-    if (provider.passcode == enteredCode) {
+    if (_controller.text.isEmpty) return;
+    if (provider.password == _controller.text) {
       provider.setSecurityError(false);
       widget.onAuthenticated();
     } else {
       provider.setSecurityError(true);
-      _controller.clear();
       HapticFeedback.heavyImpact();
 
       // Reset error after a delay
@@ -96,8 +96,8 @@ class _PasscodeVerificationScreenState
                 padding: EdgeInsets.symmetric(horizontal: 40.w),
                 child: Text(
                   provider.securityError
-                      ? 'Incorrect passcode. The cosmos remains closed. ðŸŒŒ'
-                      : 'Enter your 4-digit cosmic key to access your private profile.',
+                      ? 'Incorrect password. The cosmos remains closed. \u{1F30C}'
+                      : 'Enter your password to access your private profile.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: provider.securityError
@@ -106,79 +106,56 @@ class _PasscodeVerificationScreenState
                   ),
                 ),
               ),
-              40.verticalSpace,
-              GestureDetector(
-                onTap: () => _focusNode.requestFocus(),
-                behavior: HitTestBehavior.opaque,
-                child: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _controller,
-                  builder: (context, value, _) {
-                    final String enteredText = value.text;
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(4, (index) {
-                        final bool filled = enteredText.length > index;
-
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: EdgeInsets.symmetric(horizontal: 10.w),
-                          width: 50.w,
-                          height: 60.h,
-                          decoration: BoxDecoration(
-                            color: AppColors.white,
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(
-                              color: provider.securityError
-                                  ? AppColors.errorRed
-                                  : (filled
-                                      ? AppColors.purple
-                                      : AppColors.borderVeryLight),
-                              width: (filled || provider.securityError) ? 2.w : 1.w,
-                            ),
-                            boxShadow: filled
-                                ? [
-                                    BoxShadow(
-                                      color: AppColors.purple.withValues(alpha: 0.1),
-                                      blurRadius: 10.r,
-                                      spreadRadius: 2.r,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Center(
-                            child: Text(
-                              filled ? 'â—' : '',
-                              style: TextStyle(
-                                fontSize: 24.sp,
-                                color: provider.securityError
-                                    ? AppColors.errorRed
-                                    : AppColors.purple,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    );
-                  },
-                ),
-              ),
-              // Hidden TextField
-              SizedBox(
-                height: 0,
-                width: 0,
+              32.verticalSpace,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.w),
                 child: TextField(
                   focusNode: _focusNode,
                   controller: _controller,
-                  keyboardType: TextInputType.number,
-                  maxLength: 4,
-                  onChanged: (val) {
-                    if (val.length == 4) {
-                      _verify(val);
-                    }
-                  },
-                  decoration: const InputDecoration(
-                    counterText: "",
-                    border: InputBorder.none,
+                  obscureText: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _verify(),
+                  decoration: InputDecoration(
+                    hintText: 'Password',
+                    filled: true,
+                    fillColor: AppColors.surfaceVeryLight,
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16.r),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16.r),
+                      borderSide: BorderSide(
+                        color: provider.securityError
+                            ? AppColors.errorRed
+                            : AppColors.transparent,
+                        width: 1.5.w,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              20.verticalSpace,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.w),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _verify,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.purple,
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                    ),
+                    child: Text(
+                      'Unlock',
+                      style: AppTextStyles.buttonLarge.copyWith(
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -199,4 +176,3 @@ class _PasscodeVerificationScreenState
     );
   }
 }
-

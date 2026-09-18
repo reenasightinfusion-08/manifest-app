@@ -19,16 +19,15 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
   final TextEditingController _controller = TextEditingController();
 
   late _Step _step;
-  String? _newCode;
+  String? _newPassword;
   bool _error = false;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    // If no passphrase exists yet, skip straight to creating one.
-    final hasExisting =
-        (context.read<UserProvider>().passcode ?? '').length == 4;
+    // If no password exists yet, skip straight to creating one.
+    final hasExisting = (context.read<UserProvider>().password ?? '').isNotEmpty;
     _step = hasExisting ? _Step.current : _Step.create;
     _requestFocusSoon();
   }
@@ -46,12 +45,14 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
     super.dispose();
   }
 
-  void _onCodeEntered(String code) {
+  void _onSubmit() {
+    final text = _controller.text;
     final provider = context.read<UserProvider>();
 
     switch (_step) {
       case _Step.current:
-        if (code == provider.passcode) {
+        if (text.isEmpty) return;
+        if (text == provider.password) {
           setState(() {
             _error = false;
             _step = _Step.create;
@@ -63,7 +64,11 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
         break;
 
       case _Step.create:
-        _newCode = code;
+        if (text.length < 6) {
+          _showToast('Password must be at least 6 characters.');
+          return;
+        }
+        _newPassword = text;
         setState(() {
           _error = false;
           _step = _Step.confirm;
@@ -72,17 +77,18 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
         break;
 
       case _Step.confirm:
-        if (code == _newCode) {
-          _savePassphrase(code);
+        if (text.isEmpty) return;
+        if (text == _newPassword) {
+          _savePassword(text);
         } else {
-          _newCode = null;
+          _newPassword = null;
           setState(() {
             _error = false;
             _step = _Step.create;
           });
           _controller.clear();
           HapticFeedback.heavyImpact();
-          _showToast("Passphrases didn't match. Let's try again.");
+          _showToast("Passwords didn't match. Let's try again.");
         }
         break;
     }
@@ -97,29 +103,29 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
     });
   }
 
-  Future<void> _savePassphrase(String code) async {
+  Future<void> _savePassword(String newPassword) async {
     setState(() => _saving = true);
     final provider = context.read<UserProvider>();
-    final previousCode = provider.passcode;
-    provider.setPasscode(code);
+    final previousPassword = provider.password;
+    provider.setPassword(newPassword);
 
     try {
       await provider.syncToApi();
       if (!mounted) return;
       HapticFeedback.mediumImpact();
       Navigator.pop(context);
-      _showToast('Passphrase updated ✨');
+      _showToast('Password updated ✨');
     } catch (e) {
       // Roll back on failure so local state stays consistent with the server.
-      provider.setPasscode(previousCode);
+      provider.setPassword(previousPassword);
       if (!mounted) return;
       setState(() {
         _saving = false;
         _step = _Step.create;
-        _newCode = null;
+        _newPassword = null;
       });
       _controller.clear();
-      _showToast('Could not update passphrase. Check your connection.');
+      _showToast('Could not update password. Check your connection.');
     }
   }
 
@@ -142,21 +148,21 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
       case _Step.current:
         return 'Confirm It\'s You';
       case _Step.create:
-        return 'New Passphrase';
+        return 'New Password';
       case _Step.confirm:
-        return 'Confirm Passphrase';
+        return 'Confirm Password';
     }
   }
 
   String get _subtitle {
-    if (_error) return 'Incorrect passphrase. Try again. \u{1F30C}';
+    if (_error) return 'Incorrect password. Try again. \u{1F30C}';
     switch (_step) {
       case _Step.current:
-        return 'Enter your current 4-digit cosmic key to continue.';
+        return 'Enter your current password to continue.';
       case _Step.create:
-        return 'Choose a new 4-digit passphrase to protect your profile.';
+        return 'Choose a new password (min. 6 characters) to protect your profile.';
       case _Step.confirm:
-        return 'Enter your new passphrase one more time to confirm.';
+        return 'Enter your new password one more time to confirm.';
     }
   }
 
@@ -249,58 +255,38 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
                               ),
                             ),
                           ),
-                          40.verticalSpace,
-                          GestureDetector(
-                            onTap: _saving
-                                ? null
-                                : () => _focusNode.requestFocus(),
-                            behavior: HitTestBehavior.opaque,
-                            child: ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: _controller,
-                              builder: (context, value, _) {
-                                final String enteredText = value.text;
-                                return Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(4, (index) {
-                                    final bool filled =
-                                        enteredText.length > index;
-                                    return _PinDot(
-                                      filled: filled,
-                                      error: _error,
-                                    );
-                                  }),
-                                );
-                              },
-                            ),
-                          ),
-                          // Hidden TextField driving the PIN input
-                          SizedBox(
-                            height: 0,
-                            width: 0,
-                            child: TextField(
-                              focusNode: _focusNode,
-                              controller: _controller,
-                              enabled: !_saving,
-                              keyboardType: TextInputType.number,
-                              maxLength: 4,
-                              onChanged: (val) {
-                                if (val.length == 4) {
-                                  // Let the 4th dot render before clearing/advancing.
-                                  Future.delayed(
-                                    const Duration(milliseconds: 150),
-                                    () {
-                                      if (mounted) _onCodeEntered(val);
-                                    },
-                                  );
-                                }
-                              },
-                              decoration: const InputDecoration(
-                                counterText: "",
-                                border: InputBorder.none,
+                          32.verticalSpace,
+                          TextField(
+                            focusNode: _focusNode,
+                            controller: _controller,
+                            enabled: !_saving,
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _onSubmit(),
+                            decoration: InputDecoration(
+                              hintText: 'Password',
+                              filled: true,
+                              fillColor: AppColors.white,
+                              prefixIcon: const Icon(
+                                Icons.lock_outline_rounded,
+                                size: 20,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.r),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.r),
+                                borderSide: BorderSide(
+                                  color: _error
+                                      ? AppColors.errorRed
+                                      : AppColors.transparent,
+                                  width: 1.5.w,
+                                ),
                               ),
                             ),
                           ),
-                          28.verticalSpace,
+                          20.verticalSpace,
                           if (_saving)
                             SizedBox(
                               width: 22.w,
@@ -310,8 +296,29 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
                                 color: AppColors.purple,
                               ),
                             )
-                          else
+                          else ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _onSubmit,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.purple,
+                                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16.r),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Continue',
+                                  style: AppTextStyles.buttonLarge.copyWith(
+                                    color: AppColors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            20.verticalSpace,
                             _StepDots(step: _step),
+                          ],
                         ],
                       ),
                     ),
@@ -404,49 +411,6 @@ class _BadgeIcon extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PinDot extends StatelessWidget {
-  final bool filled;
-  final bool error;
-
-  const _PinDot({required this.filled, required this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    final Color activeColor = error ? AppColors.errorRed : AppColors.purple;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: EdgeInsets.symmetric(horizontal: 10.w),
-      width: 54.w,
-      height: 62.h,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(
-          color: filled ? activeColor : AppColors.borderVeryLight,
-          width: (filled || error) ? 2.w : 1.w,
-        ),
-        boxShadow: filled
-            ? [
-                BoxShadow(
-                  color: activeColor.withValues(alpha: 0.1),
-                  blurRadius: 10.r,
-                  spreadRadius: 2.r,
-                ),
-              ]
-            : null,
-      ),
-      child: Center(
-        child: Icon(
-          Icons.circle,
-          size: 10.sp,
-          color: filled ? activeColor : AppColors.transparent,
-        ),
       ),
     );
   }

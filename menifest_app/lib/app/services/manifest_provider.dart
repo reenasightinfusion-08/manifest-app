@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'analytics_service.dart';
 
 class ManifestProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -19,6 +20,16 @@ class ManifestProvider with ChangeNotifier {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  // Loading the user's past manifestations (used by the vision board and
+  // to seed history on app start) is a separate flag from _isLoading
+  // above. They used to share one flag, which meant the "generate my
+  // plan" button + spinner on the home screen would flash on every cold
+  // start — loadHistory() flips _isLoading true/false before the user has
+  // typed anything, and the home screen's empty-textfield check
+  // (`!provider.isLoading`) was reading that same flag.
+  bool _isLoadingHistory = false;
+  bool get isLoadingHistory => _isLoadingHistory;
 
   String? _invalidReason;
   String? get invalidReason => _invalidReason;
@@ -42,7 +53,11 @@ class ManifestProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> generateManifestationPlan(String userId, String goal) async {
+  Future<void> generateManifestationPlan(
+    String userId,
+    String goal, {
+    bool personalize = true,
+  }) async {
     if (goal.trim().isEmpty) return;
 
     _isLoading = true;
@@ -67,7 +82,11 @@ class ManifestProvider with ChangeNotifier {
     }
 
     try {
-      final data = await _apiService.generatePlan(userId, goal.trim());
+      final data = await _apiService.generatePlan(
+        userId,
+        goal.trim(),
+        personalize: personalize,
+      );
 
       // Check if backend rejected the input as invalid
       if (data['valid'] == false) {
@@ -81,6 +100,10 @@ class ManifestProvider with ChangeNotifier {
       _currentPlan = data['plan'];
       _actionCards = data['cards'] ?? [];
       _fullAi = data['full_ai'];
+      if (data['streak'] != null) {
+        _streakCount = (data['streak'] as num).toInt();
+      }
+      AnalyticsService.logEvent('manifestation_generated', {'personalize': personalize});
     } catch (e) {
       debugPrint('Plan Generation Error: $e');
     } finally {
@@ -92,15 +115,41 @@ class ManifestProvider with ChangeNotifier {
   List<dynamic> _history = [];
   List<dynamic> get history => _history;
 
+  /// Distinct goals the user has manifested for, not just total
+  /// manifestation runs — trimmed + case-folded the same way
+  /// [generateManifestationPlan]'s duplicate check compares `goal_title`,
+  /// so re-running the exact same goal only counts once here too.
+  int get distinctGoalsCount {
+    final titles = <String>{};
+    for (final item in _history) {
+      final title = item['goal_title']?.toString().trim().toLowerCase();
+      if (title != null && title.isNotEmpty) titles.add(title);
+    }
+    return titles.length;
+  }
+
+  // The streak is NOT computed from _history — it's stored on the
+  // server's `users` row (current_streak / last_manifested_date) and
+  // fetched alongside history / updated after each successful plan
+  // generation. This is deliberate: computing it from _history meant
+  // deleting your manifestations also deleted your streak, since there
+  // was nothing left to count from. Storing it separately means it
+  // survives "Delete All Manifestations" — the achievement is "days you
+  // showed up", not "days you still have saved".
+  int _streakCount = 0;
+  int get streakCount => _streakCount;
+
   Future<void> loadHistory(String userId) async {
-    _isLoading = true;
+    _isLoadingHistory = true;
     notifyListeners();
     try {
-      _history = await _apiService.getManifestationHistory(userId);
+      final result = await _apiService.getManifestationHistoryWithStreak(userId);
+      _history = result.history;
+      _streakCount = result.streak;
     } catch (e) {
       debugPrint('History Load Error: $e');
     } finally {
-      _isLoading = false;
+      _isLoadingHistory = false;
       notifyListeners();
     }
   }
@@ -166,6 +215,7 @@ class ManifestProvider with ChangeNotifier {
         _actionCards = [];
         _fullAi = null;
         _activeGoal = '';
+        AnalyticsService.logEvent('history_deleted');
         notifyListeners();
       }
       return success;
@@ -192,11 +242,13 @@ class ManifestProvider with ChangeNotifier {
     _actionCards = [];
     _activeGoal = '';
     _isLoading = false;
+    _isLoadingHistory = false;
     _invalidReason = null;
     _invalidTip = null;
     _duplicateDetected = false;
     _isFocused = false;
     _history = [];
+    _streakCount = 0;
     _isPlaying = false;
     notifyListeners();
   }

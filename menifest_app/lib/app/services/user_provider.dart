@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'notification_service.dart';
+import 'analytics_service.dart';
+import 'crash_reporting_service.dart';
 
 class UserProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -9,20 +12,131 @@ class UserProvider with ChangeNotifier {
   String _name = 'Alex Manifestor';
   String get name => _name;
 
+  static const List<String> _memojiList = [
+    'memo_1',
+    'memo_2',
+    'memo_3',
+    'memo_4',
+    'memo_5',
+    'memo_6',
+    'memo_7',
+    'memo_8',
+    'memo_9',
+    'memo_10',
+    'memo_11',
+    'memo_12',
+    'memo_13',
+    'memo_14',
+    'memo_15',
+    'memo_16',
+    'memo_17',
+    'memo_18',
+    'memo_19',
+    'memo_20',
+    'memo_21',
+    'memo_22',
+    'memo_23',
+    'memo_24',
+    'memo_25',
+    'memo_26',
+    'memo_27',
+    'memo_28',
+    'memo_29',
+    'memo_30',
+  ];
+
+  static String generateRandomAvatarUrl([String? seed]) {
+    final list = List<String>.from(_memojiList)..shuffle();
+    final chosen = list.first;
+    return 'https://cdn.jsdelivr.net/gh/alohe/memojis@main/png/$chosen.png';
+  }
+
   String _profileImage =
-      'https://api.dicebear.com/7.x/avataaars/png?seed=manifest&backgroundColor=b6e3f4,c0aede,d1d4f9';
+      'https://cdn.jsdelivr.net/gh/alohe/memojis@main/png/memo_1.png';
   String get profileImage => _profileImage;
 
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
 
   // ── Security & Privacy ────────────────────────────────────────────────
-  String? _passcode;
-  String? get passcode => _passcode;
+  // Email + password are the login credentials (also used to gate the
+  // in-app lock screen — see MyApp/_canAutoLock and AppLockScreen). The
+  // backend only ever stores/compares a bcrypt hash of the password; this
+  // plaintext copy is kept locally (SharedPreferences) purely so the lock
+  // screen can verify it offline, same tradeoff the old 4-digit passcode
+  // made.
+  String? _email;
+  String? get email => _email;
 
-  void setPasscode(String? code) {
-    _passcode = code;
+  String? _password;
+  String? get password => _password;
+
+  void setEmail(String? value) {
+    _email = value;
+    // Stale "already exists" / "domain doesn't exist" error shouldn't
+    // survive an edit to the field it was about.
+    _emailCheckError = null;
     notifyListeners();
+  }
+
+  String? _emailCheckError;
+  String? get emailCheckError => _emailCheckError;
+
+  bool _checkingEmail = false;
+  bool get checkingEmail => _checkingEmail;
+
+  /// Hits the backend right after the email/password onboarding step, so
+  /// "already registered" or "that domain doesn't exist" surfaces before
+  /// the user spends time on the rest of the questions. Returns true when
+  /// clear to move to the next step.
+  Future<bool> checkEmailAvailability() async {
+    final value = (_email ?? '').trim();
+    _checkingEmail = true;
+    notifyListeners();
+    try {
+      _emailCheckError = await _apiService.checkEmailAvailable(value);
+      return _emailCheckError == null;
+    } finally {
+      _checkingEmail = false;
+      notifyListeners();
+    }
+  }
+
+  void setPassword(String? value) {
+    _password = value;
+    notifyListeners();
+  }
+
+  // Whether the account's email has been confirmed via the link sent at
+  // signup. A logged-in account with this false is routed to
+  // VerifyEmailScreen instead of the app (see SplashScreen and MyApp's
+  // route table).
+  bool _emailVerified = false;
+  bool get emailVerified => _emailVerified;
+
+  /// Re-checks the server for whether the verification link has been
+  /// tapped yet, and persists the result. Returns the up-to-date value.
+  Future<bool> refreshEmailVerified() async {
+    if (_userId == null || _userId!.isEmpty) return _emailVerified;
+    final status = await _apiService.checkVerificationStatus(_userId!);
+    _emailVerified = status.verified;
+    final prefs = await SharedPreferences.getInstance();
+    // Right after signup, _userId is a pending-signup id — verifying is
+    // what promotes that into a real account, under a DIFFERENT id. Pick
+    // that up here, or every call after this one (profile sync, login,
+    // future polls) keeps addressing an id that stopped resolving to
+    // anything new the moment it was promoted.
+    if (status.id != _userId) {
+      _userId = status.id;
+      await prefs.setString('userId', status.id);
+    }
+    notifyListeners();
+    await prefs.setBool('emailVerified', status.verified);
+    return status.verified;
+  }
+
+  Future<String> resendVerificationEmail(String email) {
+    return _apiService.resendVerification(email);
   }
 
   bool _securityError = false;
@@ -37,7 +151,11 @@ class UserProvider with ChangeNotifier {
   bool get analyticsEnabled => _analyticsEnabled;
   void setAnalytics(bool value) {
     _analyticsEnabled = value;
+    AnalyticsService.enabled = value;
     notifyListeners();
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool('analyticsEnabled', value),
+    );
   }
 
   bool _personalizationEnabled = true;
@@ -45,13 +163,20 @@ class UserProvider with ChangeNotifier {
   void setPersonalization(bool value) {
     _personalizationEnabled = value;
     notifyListeners();
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool('personalizationEnabled', value),
+    );
   }
 
   bool _crashReportsEnabled = true;
   bool get crashReportsEnabled => _crashReportsEnabled;
   void setCrashReports(bool value) {
     _crashReportsEnabled = value;
+    CrashReportingService.enabled = value;
     notifyListeners();
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool('crashReportsEnabled', value),
+    );
   }
 
   bool _biometricLock = false;
@@ -59,6 +184,9 @@ class UserProvider with ChangeNotifier {
   void setBiometricLock(bool value) {
     _biometricLock = value;
     notifyListeners();
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool('biometricLockEnabled', value),
+    );
   }
 
   bool _autoLock = true;
@@ -66,12 +194,81 @@ class UserProvider with ChangeNotifier {
   void setAutoLock(bool value) {
     _autoLock = value;
     notifyListeners();
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool('autoLockEnabled', value),
+    );
   }
 
+  // ── Notifications ───────────────────────────────────────────────────
+  bool _notificationsEnabled = true;
+  bool get notificationsEnabled => _notificationsEnabled;
+
+  Future<void> setNotificationsEnabled(bool value) async {
+    _notificationsEnabled = value;
+    NotificationService.notificationsEnabled = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notificationsEnabled', value);
+    // Tell the server too — otherwise the daily reminder cron and the
+    // welcome/plan-ready pushes have no idea this user opted out, and
+    // keep notifying them even while the app is backgrounded or closed.
+    if (_userId != null && _userId!.isNotEmpty) {
+      unawaited(
+        _apiService.updateNotificationPrefs(
+          _userId!,
+          notificationsEnabled: value,
+        ),
+      );
+    }
+  }
+
+  bool _manifestationTips = true;
+  bool get manifestationTips => _manifestationTips;
+
+  Future<void> setManifestationTips(bool value) async {
+    _manifestationTips = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('manifestationTips', value);
+    if (_userId != null && _userId!.isNotEmpty) {
+      unawaited(
+        _apiService.updateNotificationPrefs(
+          _userId!,
+          manifestationTipsEnabled: value,
+        ),
+      );
+    }
+  }
+
+  // ── Default Autofill Answers ───────────────────────────────────────────────
+  static const List<String> defaultPersonalAnswers = [
+    '', // Name: intentionally empty for user input
+    '25',
+    'Mumbai, India',
+    'Health, peace, and personal growth',
+    'Waking up early, meditating, working on creative goals, and spending time with loved ones.',
+  ];
+
+  static const List<String> defaultFamilyAnswers = [
+    'Married',
+    'Yes, 2 kids',
+    'A happy, united home and traveling together',
+    'Deepening mutual understanding and quality time',
+    'Unconditional love, trust, and mutual respect',
+  ];
+
+  static const List<String> defaultProfessionalAnswers = [
+    'Software Engineer',
+    'Scale high-impact projects and lead innovation',
+    'Leadership, system design, and AI technologies',
+    'Financial independence to create freely without stress',
+    'Leading a successful global technology enterprise',
+  ];
+
   // ── Onboarding Survey Answers ──────────────────────────────────────────────
-  final List<String> personalAnswers = List.filled(5, '');
-  final List<String> familyAnswers = List.filled(5, '');
-  final List<String> professionalAnswers = List.filled(5, '');
+  final List<String> personalAnswers = List.from(defaultPersonalAnswers);
+  final List<String> familyAnswers = List.from(defaultFamilyAnswers);
+  final List<String> professionalAnswers = List.from(defaultProfessionalAnswers);
 
   // ── Focus & Navigation ────────────────────────────────────────────────
   int? _focusedQuestionIndex;
@@ -120,9 +317,6 @@ class UserProvider with ChangeNotifier {
     _userId = prefs.getString('userId');
     _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-    // Fetch FCM token
-    _fcmToken = await NotificationService.getToken();
-
     debugPrint('INIT: userId: $_userId, loggedIn: $_isLoggedIn');
 
     // Safety check: If we are "logged in" but have no ID from the new system, reset.
@@ -133,8 +327,58 @@ class UserProvider with ChangeNotifier {
 
     _name = prefs.getString('userName') ?? 'Alex Manifestor';
     _profileImage = prefs.getString('userImage') ?? _profileImage;
-    _passcode = prefs.getString('userPasscode');
+    _email = prefs.getString('userEmail');
+    _password = prefs.getString('userPassword');
+    // Read together with isLoggedIn, before the FCM await below — the
+    // splash screen decides isLoggedIn vs. emailVerified routing off
+    // whatever this provider holds the instant its navigation timer
+    // fires, with no guarantee init() has finished. Setting these two
+    // fields on either side of an await left a window where isLoggedIn
+    // was already true but emailVerified was still its false default,
+    // which sent verified, logged-in users to the verify-email screen
+    // after a cold start.
+    _emailVerified = prefs.getBool('emailVerified') ?? false;
+    _biometricLock = prefs.getBool('biometricLockEnabled') ?? false;
+    _analyticsEnabled = prefs.getBool('analyticsEnabled') ?? true;
+    AnalyticsService.enabled = _analyticsEnabled;
+    _personalizationEnabled = prefs.getBool('personalizationEnabled') ?? true;
+    _crashReportsEnabled = prefs.getBool('crashReportsEnabled') ?? true;
+    CrashReportingService.enabled = _crashReportsEnabled;
+    _autoLock = prefs.getBool('autoLockEnabled') ?? true;
+    _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
+    NotificationService.notificationsEnabled = _notificationsEnabled;
+    _manifestationTips = prefs.getBool('manifestationTips') ?? true;
+
+    // Fetch FCM token last — this can retry for several seconds, and
+    // every field the splash screen reads must already be in place
+    // before we await anything here.
+    _fcmToken = await NotificationService.getToken();
     notifyListeners();
+
+    // Push whatever this device has stored up to the server once per cold
+    // start — covers a fresh install (SharedPreferences reset to the
+    // defaults) landing on an existing account whose server-side prefs
+    // were last set differently.
+    if (_userId != null && _userId!.isNotEmpty) {
+      unawaited(
+        _apiService.updateNotificationPrefs(
+          _userId!,
+          notificationsEnabled: _notificationsEnabled,
+          manifestationTipsEnabled: _manifestationTips,
+        ),
+      );
+    }
+
+    // Keep Supabase's fcm_token correct for the rest of this account's
+    // lifetime — covers token rotations Firebase triggers on its own,
+    // with no reinstall involved.
+    NotificationService.onTokenRefresh.listen((newToken) {
+      debugPrint('FCM token refreshed, syncing: $newToken');
+      _fcmToken = newToken;
+      if (_userId != null && _userId!.isNotEmpty) {
+        _apiService.updateFcmToken(_userId!, newToken);
+      }
+    });
   }
 
   bool _showOnboardingErrors = false;
@@ -192,21 +436,38 @@ class UserProvider with ChangeNotifier {
   }
 
   bool isStepComplete(int step) {
-    if (step == 3) {
-      return _passcode != null && _passcode!.length == 4;
+    // Page 0 is now the email/password step (see UserInfoScreen's
+    // PageView) — pages 1-3 are the personal/family/professional
+    // question pages, i.e. getAnswersFor(step - 1).
+    if (step == 0) {
+      final emailOk =
+          (_email ?? '').trim().contains('@') && (_email ?? '').trim().contains('.');
+      final passwordOk = (_password ?? '').length >= 6;
+      return emailOk && passwordOk;
     }
-    final answers = getAnswersFor(step);
+    final answers = getAnswersFor(step - 1);
     return answers.every((a) => a.trim().isNotEmpty);
   }
 
-  Future<void> syncToApi() async {
+  /// [completeProfile] should be true only on the call that finishes
+  /// ProfileSetupScreen (personal/family/professional questions all
+  /// answered) — it's what tells the backend the account is genuinely
+  /// ready, which is when the welcome push actually fires. Signup
+  /// (account creation) and any other profile edit must leave it false.
+  Future<void> syncToApi({bool completeProfile = false}) async {
     _isLoading = true;
     notifyListeners();
 
     debugPrint('SYNCING: userId=$_userId, name=$_name');
 
     try {
-      debugPrint('SYNCING DATA: passcode=$_passcode');
+      // Splash-time init() may have raced ahead of onboarding and still be
+      // null (or stale) — refresh right before we actually need to send it.
+      final freshToken = await NotificationService.getToken();
+      if (freshToken != null) {
+        _fcmToken = freshToken;
+      }
+      debugPrint('SYNCING DATA: email=$_email, fcmToken=$_fcmToken');
       final data = await _apiService.saveUserProfile(
         id: _userId,
         name: _name,
@@ -214,27 +475,34 @@ class UserProvider with ChangeNotifier {
         personalAnswers: personalAnswers,
         familyAnswers: familyAnswers,
         professionalAnswers: professionalAnswers,
-        passcode: _passcode,
+        email: _email,
+        password: _password,
         fcmToken: _fcmToken,
+        completeProfile: completeProfile,
       );
 
       // Save locally after successful sync
-      if (data != null) {
-        final prefs = await SharedPreferences.getInstance();
-        _userId = data['id']; // Get ID from response
-        debugPrint('SYNC SUCCESS: new userId=$_userId');
+      final prefs = await SharedPreferences.getInstance();
+      _userId = data['id']; // Get ID from response
+      debugPrint('SYNC SUCCESS: new userId=$_userId');
+      AnalyticsService.logEvent('signup_complete', {'userId': _userId});
 
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('userName', _name);
-        await prefs.setString('userImage', _profileImage);
-        await prefs.setString('userId', _userId!);
-        if (_passcode != null) {
-          await prefs.setString('userPasscode', _passcode!);
-        }
-        _isLoggedIn = true;
-      } else {
-        debugPrint('SYNC SUCCESS but returned no data object.');
+      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('userName', _name);
+      await prefs.setString('userImage', _profileImage);
+      await prefs.setString('userId', _userId!);
+      if (_email != null) {
+        await prefs.setString('userEmail', _email!);
       }
+      if (_password != null) {
+        await prefs.setString('userPassword', _password!);
+      }
+      // A brand-new signup always comes back unverified; an existing
+      // account being re-synced (e.g. profile edit) carries whatever its
+      // current server-side value is.
+      _emailVerified = data['email_verified'] == true;
+      await prefs.setBool('emailVerified', _emailVerified);
+      _isLoggedIn = true;
     } catch (e) {
       debugPrint('SYNC ERROR: $e');
       rethrow;
@@ -244,58 +512,17 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> loginByEmail(String email, String password) async {
+
+  /// Logs in with email + password. The backend verifies the password
+  /// against the bcrypt hash and only returns a profile on a match, so
+  /// there's nothing left to check client-side here.
+  Future<bool> loginWithEmail(String email, String password) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      const allowedId = 'anandyadav21219@gmail.com';
-      if (email == allowedId && password == allowedId) {
-        // Find or create a profile for this admin
-        var profile = await _apiService.searchProfileByName('Anand Yadav');
-
-        if (profile == null) {
-          // If profile doesn't exist, we might need to create it,
-          // but for now let's just use a dummy if search fails
-          _userId = 'admin_anand';
-          _name = 'Anand Yadav';
-        } else {
-          _userId = profile['id'];
-          _name = profile['full_name'] ?? 'Anand Yadav';
-          _profileImage = profile['avatar_url'] ?? _profileImage;
-        }
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('userName', _name);
-        await prefs.setString('userId', _userId!);
-
-        _isLoggedIn = true;
-        notifyListeners();
-        return true;
-      }
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> joinExistingProfile(String name, String passcode) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final profile = await _apiService.searchProfileByName(name);
+      final profile = await _apiService.login(email, password);
       if (profile != null) {
-        // Verify Passcode for privacy
-        // We must check if the entered passcode matches the saved one.
-        // If the saved passcode is null or empty, we treat it as no passcode set,
-        // but since our app requires 4 digits, any mismatch is an error.
-        if (profile['passcode'] != passcode) {
-          throw Exception('Incorrect passcode for this cosmic identity.');
-        }
-
         _userId = profile['id'];
         _name = profile['full_name'] ?? _name;
         _profileImage = profile['avatar_url'] ?? _profileImage;
@@ -325,14 +552,34 @@ class UserProvider with ChangeNotifier {
         await prefs.setString('userName', _name);
         await prefs.setString('userImage', _profileImage);
         await prefs.setString('userId', _userId!);
-        // Save passcode locally and update state
-        _passcode = passcode;
-        await prefs.setString('userPasscode', passcode);
+        // Save email/password locally — used to gate the app-lock screen
+        // offline, same as the old passcode did.
+        _email = email;
+        _password = password;
+        await prefs.setString('userEmail', email);
+        await prefs.setString('userPassword', password);
+        // The backend only returns success here when email_verified is
+        // already true (see POST /api/login) — nothing left to check.
+        _emailVerified = true;
+        await prefs.setBool('emailVerified', true);
 
         _isLoggedIn = true;
 
         debugPrint('JOIN SUCCESS: userId=$_userId');
+        AnalyticsService.logEvent('login_success', {'userId': _userId});
         notifyListeners();
+
+        // This device's fcm_token may not be the one already stored for
+        // this account (fresh install after uninstall = brand-new token).
+        // Sync it now instead of waiting for a token rotation event that
+        // may never come.
+        NotificationService.getToken().then((token) {
+          if (token != null && _userId != null) {
+            _fcmToken = token;
+            _apiService.updateFcmToken(_userId!, token);
+          }
+        });
+
         return true;
       }
       return false;
@@ -347,6 +594,7 @@ class UserProvider with ChangeNotifier {
     try {
       final success = await _apiService.deleteAccount(_userId!);
       if (success) {
+        AnalyticsService.logEvent('account_deleted');
         await logout();
       }
       return success;
@@ -364,17 +612,19 @@ class UserProvider with ChangeNotifier {
     _isLoggedIn = false;
     _userId = null;
     _name = 'Alex Manifestor';
-    _passcode = null;
+    _email = null;
+    _password = null;
+    _emailVerified = false;
     _profileImage =
-        'https://api.dicebear.com/7.x/avataaars/png?seed=manifest&backgroundColor=b6e3f4,c0aede,d1d4f9';
+        'https://cdn.jsdelivr.net/gh/alohe/memojis@main/png/memo_1.png';
     _archetypeData = null;
     _onboardingStep = 0;
 
-    // Clear answers
+    // Reset answers
     for (int i = 0; i < 5; i++) {
-      personalAnswers[i] = '';
-      familyAnswers[i] = '';
-      professionalAnswers[i] = '';
+      personalAnswers[i] = defaultPersonalAnswers[i];
+      familyAnswers[i] = defaultFamilyAnswers[i];
+      professionalAnswers[i] = defaultProfessionalAnswers[i];
     }
 
     notifyListeners();

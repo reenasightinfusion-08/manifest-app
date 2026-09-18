@@ -11,6 +11,7 @@ import '../../services/api_service.dart';
 import '../../services/manifest_provider.dart';
 import '../../services/user_provider.dart';
 import '../security/change_passphrase_screen.dart';
+import '../../services/biometric_service.dart';
 
 class PrivacySettingsScreen extends StatefulWidget {
   const PrivacySettingsScreen({super.key});
@@ -20,14 +21,49 @@ class PrivacySettingsScreen extends StatefulWidget {
 }
 
 class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
-  bool _analyticsEnabled = true;
-  bool _personalizationEnabled = true;
-  bool _crashReportsEnabled = true;
-  bool _biometricLock = false;
-  bool _autoLock = true;
+  Future<void> _onBiometricToggle(bool enable) async {
+    final provider = context.read<UserProvider>();
+
+    if (!enable) {
+      provider.setBiometricLock(false);
+      return;
+    }
+
+    final available = await BiometricService.isAvailable();
+    if (!available) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No fingerprint or Face ID is set up on this device. '
+            'Add one in your phone\'s settings first.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Confirm it actually works before relying on it to gate the app.
+    final result = await BiometricService.authenticate(
+      reason: 'Confirm to enable biometric lock',
+    );
+    if (result.success) {
+      provider.setBiometricLock(true);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'Could not verify biometrics.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<UserProvider>();
+    final biometricLock = user.biometricLock;
     return Scaffold(
       backgroundColor: AppColors.white,
       body: CustomScrollView(
@@ -163,8 +199,9 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         title: 'Usage Analytics',
                         subtitle:
                             'Help us improve the app by sharing anonymous usage data',
-                        value: _analyticsEnabled,
-                        onChanged: (v) => setState(() => _analyticsEnabled = v),
+                        value: user.analyticsEnabled,
+                        onChanged: (v) =>
+                            context.read<UserProvider>().setAnalytics(v),
                       ),
                       _Divider(),
                       _ToggleTile(
@@ -173,9 +210,9 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         title: 'AI Personalization',
                         subtitle:
                             'Allow AI to learn from your goals and improve suggestions',
-                        value: _personalizationEnabled,
+                        value: user.personalizationEnabled,
                         onChanged: (v) =>
-                            setState(() => _personalizationEnabled = v),
+                            context.read<UserProvider>().setPersonalization(v),
                       ),
                       _Divider(),
                       _ToggleTile(
@@ -184,9 +221,9 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         title: 'Crash Reports',
                         subtitle:
                             'Automatically send crash logs to help fix bugs',
-                        value: _crashReportsEnabled,
+                        value: user.crashReportsEnabled,
                         onChanged: (v) =>
-                            setState(() => _crashReportsEnabled = v),
+                            context.read<UserProvider>().setCrashReports(v),
                       ),
                     ],
                   ),
@@ -206,9 +243,9 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         icon: Icons.fingerprint_rounded,
                         iconColor: AppColors.blue,
                         title: 'Biometric Lock',
-                        subtitle: 'Use Face ID or fingerprint to open the app',
-                        value: _biometricLock,
-                        onChanged: (v) => setState(() => _biometricLock = v),
+                        subtitle: 'Fingerprint to open the app',
+                        value: biometricLock,
+                        onChanged: _onBiometricToggle,
                       ),
                       _Divider(),
                       _ToggleTile(
@@ -216,15 +253,16 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         iconColor: AppColors.blue,
                         title: 'Auto-Lock Session',
                         subtitle:
-                            'Automatically lock after 10 minutes of inactivity',
-                        value: _autoLock,
-                        onChanged: (v) => setState(() => _autoLock = v),
+                            'Automatically lock after 5 minutes of inactivity',
+                        value: user.autoLock,
+                        onChanged: (v) =>
+                            context.read<UserProvider>().setAutoLock(v),
                       ),
                       _Divider(),
                       _ActionTile(
                         icon: Icons.key_outlined,
                         iconColor: AppColors.blue,
-                        title: 'Change Passphrase',
+                        title: 'Change Password',
                         subtitle: 'Update your cosmic security key',
                         onTap: () => Navigator.push(
                           context,
@@ -488,7 +526,6 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
       ),
     );
   }
-
 
   void _showToast(BuildContext context, String message) {
     HapticFeedback.lightImpact();

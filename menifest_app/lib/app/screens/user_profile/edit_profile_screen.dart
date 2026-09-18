@@ -131,8 +131,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: GestureDetector(
                         onTap: () {
                           setState(() {
-                            _tempAvatar =
-                                'https://api.dicebear.com/7.x/avataaars/png?seed=${DateTime.now().millisecondsSinceEpoch}&backgroundColor=b6e3f4,c0aede,d1d4f9';
+                            _tempAvatar = UserProvider.generateRandomAvatarUrl();
                           });
                         },
                         child: Container(

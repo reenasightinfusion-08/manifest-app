@@ -33,6 +33,18 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _submitManifestation(ManifestProvider provider) {
+    final text = _dreamController.text.trim();
+    if (text.isEmpty || provider.isLoading) return;
+    FocusScope.of(context).unfocus();
+    final user = context.read<UserProvider>();
+    provider.generateManifestationPlan(
+      user.userId ?? '',
+      _dreamController.text,
+      personalize: user.personalizationEnabled,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ManifestProvider>(
@@ -291,6 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: TextField(
                               controller: _dreamController,
                               maxLines: 5,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _submitManifestation(provider),
                               style: AppTextStyles.bodyMedium.copyWith(
                                 color: AppColors.textDark,
                                 fontWeight: FontWeight.w500,
@@ -347,13 +361,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               32.verticalSpace,
                               PrimaryButton(
                                 label: 'Get My Action Plan ✨',
-                                onPressed: () {
-                                  final user = context.read<UserProvider>();
-                                  provider.generateManifestationPlan(
-                                    user.userId ?? '',
-                                    _dreamController.text,
-                                  );
-                                },
+                                onPressed: () =>
+                                    _submitManifestation(provider),
                                 isLoading: provider.isLoading,
                               ),
                             ],
@@ -493,20 +502,51 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         20.verticalSpace,
-                        ...provider.actionCards.asMap().entries.map(
-                          (entry) => Padding(
-                            padding: EdgeInsets.only(bottom: 16.h),
-                            child: _ActionCard(
-                              index: entry.key + 1,
-                              title: entry.value['task_title'],
-                              description: entry.value['task_description'],
-                              plan: provider.currentPlan!,
-                              summary: provider.fullAi?['pillars'] != null
-                                  ? provider.fullAi!['pillars'][entry
-                                        .key]['summary']
-                                  : 'Harnessing cosmic intent...',
-                            ),
-                          ),
+                        Builder(
+                          builder: (context) {
+                            // Built once so the detail screen can be handed
+                            // every step up front — that's what lets it move
+                            // straight from step 1 to step 2 internally
+                            // instead of forcing you back out to this list.
+                            final pillars = provider.fullAi?['pillars'];
+                            final steps = provider.actionCards
+                                .asMap()
+                                .entries
+                                .map(
+                                  (entry) => {
+                                    'day_number': entry.key + 1,
+                                    'task_title': entry.value['task_title'],
+                                    'task_description':
+                                        entry.value['task_description'],
+                                    'summary':
+                                        (pillars != null &&
+                                            entry.key <
+                                                (pillars as List).length)
+                                        ? pillars[entry.key]['summary']
+                                        : 'Harnessing cosmic intent...',
+                                  },
+                                )
+                                .toList();
+
+                            return Column(
+                              children: steps
+                                  .asMap()
+                                  .entries
+                                  .map(
+                                    (entry) => Padding(
+                                      padding: EdgeInsets.only(bottom: 16.h),
+                                      child: _ActionCard(
+                                        index: entry.key + 1,
+                                        title: entry.value['task_title'],
+                                        steps: steps,
+                                        stepIndex: entry.key,
+                                        plan: provider.currentPlan!,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            );
+                          },
                         ),
                       ],
 
@@ -526,16 +566,16 @@ class _HomeScreenState extends State<HomeScreen> {
 class _ActionCard extends StatelessWidget {
   final int index;
   final String title;
-  final String description;
   final Map<String, dynamic> plan;
-  final String summary;
+  final List<Map<String, dynamic>> steps;
+  final int stepIndex;
 
   const _ActionCard({
     required this.index,
     required this.title,
-    required this.description,
     required this.plan,
-    required this.summary,
+    required this.steps,
+    required this.stepIndex,
   });
 
   void _showDetail(BuildContext context) {
@@ -543,12 +583,11 @@ class _ActionCard extends StatelessWidget {
       context,
       AppRoutes.actionDetail,
       arguments: {
-        'cardData': {
-          'day_number': index,
-          'task_title': title,
-          'task_description': description,
-          'summary': summary,
-        },
+        // The full roadmap, not just this one card — lets the detail
+        // screen move straight from one step to the next itself instead
+        // of forcing you back out to this list every time.
+        'steps': steps,
+        'initialIndex': stepIndex,
         'plan': plan,
       },
     );
@@ -601,13 +640,6 @@ class _ActionCard extends StatelessWidget {
                     style: AppTextStyles.bodyLarge.copyWith(
                       fontWeight: FontWeight.w900,
                       color: AppColors.textDark,
-                    ),
-                  ),
-                  4.verticalSpace,
-                  Text(
-                    'Tap to view cosmic details',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textGrey,
                     ),
                   ),
                 ],

@@ -3,6 +3,11 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { sendPushNotification } = require('./services/pushNotificationService');
+const bcrypt = require('bcryptjs');
+const { newVerificationToken, sendVerificationEmail } = require('./services/emailVerificationService');
+const dns = require('dns').promises;
+const { probeMailbox } = require('./services/mailboxProbeService');
 
 
 const app = express();
@@ -45,10 +50,223 @@ app.get('/', (req, res) => {
   res.send('Manifest Cosmic Backend is Live! ✨');
 });
 
+// ─── Daily Reminder Cron ───────────────────────────────────────────────────
+// Vercel Cron hits this on a schedule (see vercel.json "crons"). It's a GET
+// with no user session, so we lock it down with a shared secret instead of
+// auth — Vercel automatically sends "Authorization: Bearer <CRON_SECRET>"
+// when CRON_SECRET is set in the project's env vars.
+app.get('/api/cron/daily-reminder', async (req, res) => {
+  const expected = process.env.CRON_SECRET;
+  if (expected) {
+    const authHeader = req.headers.authorization || '';
+    if (authHeader !== `Bearer ${expected}`) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+  } else {
+    console.warn('⚠️  CRON_SECRET not set — /api/cron/daily-reminder is unprotected!');
+  }
+
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, full_name, fcm_token')
+      .not('fcm_token', 'is', null)
+      .eq('notifications_enabled', true)
+      .eq('manifestation_tips_enabled', true);
+
+    if (error) throw error;
+
+    console.log(`⏰ Daily reminder cron: notifying ${users.length} user(s)...`);
+
+    const results = await Promise.allSettled(
+      users.map((u) =>
+        sendPushNotification(u.fcm_token, {
+          title: '✨ The Cosmos is Waiting',
+          body: `${u.full_name || 'Manifestor'}, take a moment today to revisit your manifestation blueprint.`,
+          data: { type: 'daily_reminder' },
+        })
+      )
+    );
+
+    const sent = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
+    res.json({ success: true, total: users.length, sent });
+  } catch (error) {
+    console.error('❌ Daily reminder cron failed:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Lightweight FCM token sync — used after logging into an existing account
+// on a new install (old token is dead), and whenever Firebase rotates a
+// device's token on its own. Deliberately separate from POST /api/users so
+// a token refresh never re-triggers the AI profile validator.
+app.post('/api/users/:id/fcm-token', async (req, res) => {
+  const { id } = req.params;
+  const { fcm_token } = req.body;
+
+  if (!fcm_token) {
+    return res.status(400).json({ success: false, message: 'fcm_token is required.' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ fcm_token })
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    console.log(`🔄 fcm_token synced for user ${id}`);
+    res.json({ success: true, data: data[0] });
+  } catch (error) {
+    console.error('FCM token sync error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Lightweight notification-preference sync — called the moment the user
+// flips "Push Notifications" or "Manifestation Tips" in-app, so the
+// server-side daily reminder cron (and the welcome/plan-ready pushes
+// below) actually know not to notify someone who opted out. Deliberately
+// separate from POST /api/users for the same reason fcm-token is: no need
+// to re-run the AI profile validator for a simple toggle flip.
+app.post('/api/users/:id/notification-prefs', async (req, res) => {
+  const { id } = req.params;
+  const { notifications_enabled, manifestation_tips_enabled } = req.body;
+
+  const update = {};
+  if (typeof notifications_enabled === 'boolean') {
+    update.notifications_enabled = notifications_enabled;
+  }
+  if (typeof manifestation_tips_enabled === 'boolean') {
+    update.manifestation_tips_enabled = manifestation_tips_enabled;
+  }
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Provide notifications_enabled and/or manifestation_tips_enabled as booleans.',
+    });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .update(update)
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    console.log(`🔔 notification prefs synced for user ${id}:`, update);
+    res.json({ success: true, data: data[0] });
+  } catch (error) {
+    console.error('Notification prefs sync error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Create/Update User API
+// Pre-check used by the app right after the email field on signup, so
+// "this email is taken" / "that domain doesn't exist" shows immediately —
+// instead of only after all 4 onboarding steps are filled in and posted.
+app.get('/api/check-email', async (req, res) => {
+  const email = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!email || !EMAIL_RE.test(email)) {
+    return res.json({ available: false, reason: 'invalid_format', message: 'Enter a valid email address.' });
+  }
+
+  const domain = email.split('@')[1];
+  try {
+    const records = await dns.resolveMx(domain);
+    if (!records || records.length === 0) {
+      return res.json({ available: false, reason: 'domain_not_found', message: "That email domain doesn't seem to exist — check for a typo." });
+    }
+  } catch (err) {
+    // ENOTFOUND / ENODATA — domain has no mail server, so mail can't be
+    // delivered there at all.
+    return res.json({ available: false, reason: 'domain_not_found', message: "That email domain doesn't seem to exist — check for a typo." });
+  }
+
+  // Best-effort check that the specific mailbox exists, not just the
+  // domain. Gmail/Outlook/Yahoo and most big providers always answer
+  // "exists" here on purpose (anti-enumeration), so this only ever
+  // catches what it catches — e.g. a typo'd or made-up address on a
+  // smaller mail server that does reject unknown recipients. Anything
+  // short of an explicit "no such user" (mailboxStatus === 'not_found')
+  // is let through, since a false positive here would block real users.
+  try {
+    const mailboxStatus = await probeMailbox(email, { mailFrom: process.env.GMAIL_USER });
+    if (mailboxStatus === 'not_found') {
+      return res.json({
+        available: false,
+        reason: 'mailbox_not_found',
+        message: "That mailbox doesn't seem to exist — double-check the address.",
+      });
+    }
+  } catch (probeErr) {
+    console.error('Mailbox probe error (non-fatal):', probeErr.message);
+  }
+
+  try {
+    const { data: existing, error } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('email', email);
+    if (error) throw error;
+    if (existing && existing.length > 0) {
+      return res.json({ available: false, reason: 'already_exists', message: 'An account with this email already exists.' });
+    }
+
+    // Self-clean: an expired, never-verified pending signup for this email
+    // shouldn't block a retry — delete it before checking for a live one.
+    await supabase
+      .from('pending_signups')
+      .delete()
+      .ilike('email', email)
+      .is('promoted_to_user_id', null)
+      .lt('verification_expires', new Date().toISOString());
+
+    const { data: pending, error: pendingError } = await supabase
+      .from('pending_signups')
+      .select('id')
+      .ilike('email', email)
+      .is('promoted_to_user_id', null);
+    if (pendingError) throw pendingError;
+    if (pending && pending.length > 0) {
+      return res.json({
+        available: false,
+        reason: 'verification_pending',
+        message: 'A signup with this email is already waiting on email verification. Check your inbox, or wait for it to expire and try again.',
+      });
+    }
+  } catch (error) {
+    console.error('check-email lookup error:', error.message);
+    return res.status(500).json({ available: false, reason: 'server_error', message: 'Could not verify email right now — try again.' });
+  }
+
+  res.json({ available: true });
+});
+
 app.post('/api/users', async (req, res) => {
   console.log('Incoming user update/creation:', req.body);
-  const { id, full_name, avatar_url, personal_answers, family_answers, professional_answers, passcode, email } = req.body;
+  const {
+    id, full_name, avatar_url, personal_answers, family_answers, professional_answers,
+    email, password, fcm_token, notifications_enabled, manifestation_tips_enabled,
+    // Set only by ProfileSetupScreen's final "Complete My Profile" call —
+    // signup-time and any other profile update never sends this. That's
+    // what welcome_notified_sent below keys off to fire the welcome push
+    // exactly once, at the point the account is genuinely ready.
+    complete_profile,
+  } = req.body;
 
   // Security Lock: Temporarily disabled to allow new user creation
   /*
@@ -62,6 +280,75 @@ app.post('/api/users', async (req, res) => {
 
   if (!full_name) {
     return res.status(400).json({ success: false, message: 'Name is required.' });
+  }
+
+  // Email/password are the login credentials now (replacing the old 4-digit
+  // passcode). Required on signup; on a profile update (id present) they're
+  // only re-validated if the client actually sent them.
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : email;
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!id) {
+    if (!normalizedEmail || !EMAIL_RE.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'A valid email is required.' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+  } else {
+    if (normalizedEmail && !EMAIL_RE.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'A valid email is required.' });
+    }
+    if (password && password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+  }
+
+  let password_hash;
+  try {
+    if (password) {
+      password_hash = await bcrypt.hash(password, 10);
+    }
+
+    if (normalizedEmail) {
+      // Uniqueness check — one account per email.
+      const { data: existing, error: emailLookupError } = await supabase
+        .from('users')
+        .select('id')
+        .ilike('email', normalizedEmail);
+      if (emailLookupError) throw emailLookupError;
+      const takenByAnotherAccount = (existing || []).some((u) => u.id !== id);
+      if (takenByAnotherAccount) {
+        return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+      }
+
+      // New signup only (id absent) — also can't collide with someone
+      // else's still-pending, not-yet-verified signup for this email.
+      if (!id) {
+        await supabase
+          .from('pending_signups')
+          .delete()
+          .ilike('email', normalizedEmail)
+          .is('promoted_to_user_id', null)
+          .lt('verification_expires', new Date().toISOString());
+
+        const { data: pendingExisting, error: pendingLookupError } = await supabase
+          .from('pending_signups')
+          .select('id')
+          .ilike('email', normalizedEmail)
+          .is('promoted_to_user_id', null);
+        if (pendingLookupError) throw pendingLookupError;
+        if (pendingExisting && pendingExisting.length > 0) {
+          return res.status(409).json({
+            success: false,
+            message: 'A signup with this email is already waiting on email verification.',
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Email/password validation error:', error.message);
+    return res.status(500).json({ success: false, message: `Failed to validate credentials: ${error.message}` });
   }
 
   // ── AI Profile Validation ──────────────────────────────────────────────
@@ -123,7 +410,11 @@ app.post('/api/users', async (req, res) => {
           personal_answers,
           family_answers,
           professional_answers,
-          passcode
+          ...(normalizedEmail ? { email: normalizedEmail } : {}),
+          ...(password_hash ? { password_hash } : {}),
+          ...(fcm_token ? { fcm_token } : {}),
+          ...(typeof notifications_enabled === 'boolean' ? { notifications_enabled } : {}),
+          ...(typeof manifestation_tips_enabled === 'boolean' ? { manifestation_tips_enabled } : {}),
         })
         .eq('id', id)
         .select();
@@ -133,10 +424,35 @@ app.post('/api/users', async (req, res) => {
         throw error;
       }
       result = (data && data.length > 0) ? data[0] : null;
+
+      // Welcome push — only on the call that finishes profile setup.
+      // No DB-side "already sent" flag here (would need a schema change
+      // we can't safely run from the app's anon key) — this relies on the
+      // client only ever sending complete_profile:true once, from
+      // ProfileSetupScreen's final "Complete My Profile" tap. If that
+      // ever needs to become resend-proof, add a nullable
+      // welcome_notified_at timestamptz column to users and check it here.
+      if (
+        complete_profile === true &&
+        result?.fcm_token &&
+        result?.notifications_enabled !== false
+      ) {
+        sendPushNotification(result.fcm_token, {
+          title: '✨ Welcome to Your Cosmic Journey',
+          body: `${result.full_name || 'Manifestor'}, your manifestation space is ready. Let's set your first intention.`,
+          data: { type: 'welcome' },
+        }).catch((err) => console.error('Welcome push error (non-fatal):', err.message));
+      }
     } else {
-      // INSERT new user
+      // INSERT — a brand-new signup does NOT become a `users` row yet.
+      // It's held in `pending_signups` until the emailed link is tapped
+      // (see GET /api/verify-email, which is what actually creates the
+      // `users` row). This is what makes an unverified/fake-email signup
+      // genuinely not exist as a user — not just blocked from logging in.
+      const { token: verificationToken, expiresAt: verificationExpires } =
+        newVerificationToken();
       const { data, error } = await supabase
-        .from('users')
+        .from('pending_signups')
         .insert([
           {
             full_name,
@@ -144,17 +460,45 @@ app.post('/api/users', async (req, res) => {
             personal_answers,
             family_answers,
             professional_answers,
-            passcode,
+            email: normalizedEmail,
+            password_hash,
+            fcm_token: fcm_token || null,
+            ...(typeof notifications_enabled === 'boolean' ? { notifications_enabled } : {}),
+            ...(typeof manifestation_tips_enabled === 'boolean' ? { manifestation_tips_enabled } : {}),
+            verification_token: verificationToken,
+            verification_expires: verificationExpires,
             created_at: new Date().toISOString()
           }
         ])
         .select();
 
       if (error) {
-        console.error('Supabase Insert Error:', error);
+        console.error('Supabase pending_signups Insert Error:', error);
         throw error;
       }
       result = (data && data.length > 0) ? data[0] : null;
+
+      // Welcome push happens later still — see the complete_profile branch
+      // above, which only ever runs on a real `users` row anyway.
+
+      // Verification email — fire-and-forget, same reasoning as the push
+      // above. baseUrl is derived from the request itself, so this works
+      // whether the backend is reached at a LAN IP in dev or a real domain
+      // in production (override with PUBLIC_BACKEND_URL if needed).
+      if (result?.email) {
+        const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+        sendVerificationEmail(result.email, verificationToken, baseUrl)
+          .catch((err) => console.error('Verification email error (non-fatal):', err.message));
+      }
+    }
+
+    // Never echo sensitive fields back to the client.
+    if (result) {
+      delete result.password_hash;
+      delete result.email_verification_token;
+      delete result.email_verification_expires;
+      delete result.verification_token;
+      delete result.verification_expires;
     }
 
     res.status(id ? 200 : 201).json({
@@ -178,44 +522,354 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// Search User by Name (Smart Discovery)
-app.get('/api/users/search', async (req, res) => {
-  const { name } = req.query;
+// Login by email + password (replaces the old name-based "search" lookup).
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Email and password are required.' });
+  }
+
   try {
-    // 1. Fetch all potential matches
+    const normalizedEmail = email.trim().toLowerCase();
     const { data: matches, error } = await supabase
       .from('users')
-      .select('*, manifestations(count)')
-      .eq('full_name', name)
-      .order('created_at', { ascending: false });
+      .select('*')
+      .ilike('email', normalizedEmail)
+      .limit(1);
 
     if (error) throw error;
-    if (!matches || matches.length === 0) {
-      return res.status(404).json({ success: false, message: 'Identity not found.' });
-    }
+    const user = matches && matches[0];
 
-    // 2. Smart Selection: Prioritize the soul with the most history or answers
-    let bestMatch = matches[0];
-    let maxQuality = -1;
+    // No verified `users` row for this email — before failing outright,
+    // check whether it's actually a still-pending signup (right password,
+    // link just never tapped) so that case gets the helpful "verify your
+    // email" response instead of a generic "invalid credentials".
+    if (!user || !user.password_hash) {
+      const { data: pendingMatches, error: pendingError } = await supabase
+        .from('pending_signups')
+        .select('id, email, password_hash')
+        .ilike('email', normalizedEmail)
+        .is('promoted_to_user_id', null)
+        .limit(1);
+      if (pendingError) throw pendingError;
+      const pending = pendingMatches && pendingMatches[0];
 
-    for (let u of matches) {
-      const manifestCount = u.manifestations?.[0]?.count || 0;
-      const answersFilled = [...(u.personal_answers || []), ...(u.family_answers || []), ...(u.professional_answers || [])].filter(a => a.trim().length > 0).length;
-
-      const quality = (manifestCount * 10) + answersFilled; // Manifestations are high priority
-
-      if (quality > maxQuality) {
-        maxQuality = quality;
-        bestMatch = u;
+      if (pending && pending.password_hash) {
+        const pendingPasswordMatches = await bcrypt.compare(password, pending.password_hash);
+        if (pendingPasswordMatches) {
+          return res.status(403).json({
+            success: false,
+            message: 'Please verify your email before logging in.',
+            email_verified: false,
+            data: { id: pending.id, email: pending.email },
+          });
+        }
       }
+
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    // Cleanup for response
-    delete bestMatch.manifestations;
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatches) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
 
-    res.json({ success: true, data: bestMatch });
+    delete user.password_hash;
+    delete user.email_verification_token;
+    delete user.email_verification_expires;
+
+    // Correct password, but the email link was never tapped — block entry.
+    // Still hand back the id/email (nothing sensitive) so the app can show
+    // a "verify your email" screen and let them resend/poll without
+    // asking for the password again.
+    if (!user.email_verified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email before logging in.',
+        email_verified: false,
+        data: { id: user.id, email: user.email },
+      });
+    }
+
+    res.json({ success: true, data: user });
   } catch (error) {
-    console.error('Search Error:', error.message);
+    console.error('Login error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// The link tapped from the verification email. Serves a plain HTML page
+// (not JSON) since this is opened directly in a browser.
+app.get('/api/verify-email', async (req, res) => {
+  const { token } = req.query;
+  const htmlPage = (title, message, ok) => res.status(ok ? 200 : 400).send(`
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"><title>${title}</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      </head>
+      <body style="font-family: sans-serif; text-align: center; padding: 60px 20px; background: #faf8ff;">
+        <div style="font-size: 48px;">${ok ? '✅' : '⚠️'}</div>
+        <h2>${title}</h2>
+        <p style="color: #666; max-width: 360px; margin: 0 auto;">${message}</p>
+      </body>
+    </html>
+  `);
+
+  if (!token) {
+    return htmlPage('Missing link', 'This verification link looks incomplete.', false);
+  }
+
+  try {
+    // New-flow signups: the token lives on a pending_signups row, and
+    // tapping the link is what promotes it into a real `users` row for
+    // the first time — an unverified signup was never a `users` row at
+    // all, so there's nothing to "flip" until this happens.
+    const { data: pendingMatches, error: pendingError } = await supabase
+      .from('pending_signups')
+      .select('*')
+      .eq('verification_token', token)
+      .limit(1);
+    if (pendingError) throw pendingError;
+    const pending = pendingMatches && pendingMatches[0];
+
+    if (pending) {
+      if (pending.promoted_to_user_id) {
+        // Already verified earlier — tapping an old/reused link again.
+        return htmlPage('Email verified!', 'Return to the Manifest app and tap Continue.', true);
+      }
+
+      if (pending.verification_expires && new Date(pending.verification_expires) < new Date()) {
+        return htmlPage(
+          'Link expired',
+          'This verification link expired. Go back to the app and tap "Resend email" to get a new one.',
+          false
+        );
+      }
+
+      const { data: created, error: insertError } = await supabase
+        .from('users')
+        .insert([
+          {
+            full_name: pending.full_name,
+            avatar_url: pending.avatar_url,
+            personal_answers: pending.personal_answers,
+            family_answers: pending.family_answers,
+            professional_answers: pending.professional_answers,
+            email: pending.email,
+            password_hash: pending.password_hash,
+            fcm_token: pending.fcm_token,
+            notifications_enabled: pending.notifications_enabled,
+            manifestation_tips_enabled: pending.manifestation_tips_enabled,
+            email_verified: true,
+            created_at: new Date().toISOString(),
+          },
+        ])
+        .select();
+
+      if (insertError) throw insertError;
+      const newUser = created && created[0];
+      if (!newUser) throw new Error('User row was not created from pending signup.');
+
+      // Kept, not deleted — the app polls verification-status with the
+      // pending id it already has, and needs this row to resolve that id
+      // to the real users.id it should switch to (see
+      // GET /api/users/:id/verification-status below).
+      const { error: promoteError } = await supabase
+        .from('pending_signups')
+        .update({ promoted_to_user_id: newUser.id })
+        .eq('id', pending.id);
+      if (promoteError) throw promoteError;
+
+      // Welcome push happens later still, once the whole profile is
+      // filled in — see the complete_profile branch of POST /api/users.
+      return htmlPage('Email verified!', 'Return to the Manifest app and tap Continue.', true);
+    }
+
+    // Fallback: an already-existing `users` row from before this table
+    // existed, still carrying its own verification token.
+    const { data: matches, error } = await supabase
+      .from('users')
+      .select('id, email_verification_expires')
+      .eq('email_verification_token', token)
+      .limit(1);
+
+    if (error) throw error;
+    const user = matches && matches[0];
+
+    if (!user) {
+      return htmlPage(
+        'Invalid link',
+        "This verification link isn't valid, or was already used. Request a new one from the app if you still need it.",
+        false
+      );
+    }
+
+    if (user.email_verification_expires && new Date(user.email_verification_expires) < new Date()) {
+      return htmlPage(
+        'Link expired',
+        'This verification link expired. Go back to the app and tap "Resend email" to get a new one.',
+        false
+      );
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        email_verified: true,
+        email_verification_token: null,
+        email_verification_expires: null,
+      })
+      .eq('id', user.id);
+
+    if (updateError) throw updateError;
+
+    return htmlPage('Email verified!', 'Return to the Manifest app and tap Continue.', true);
+  } catch (error) {
+    console.error('Email verification error:', error.message);
+    return htmlPage('Something went wrong', 'Please try the link again in a moment.', false);
+  }
+});
+
+// Lets the app poll whether the emailed link has been tapped yet, without
+// re-sending the password.
+// The id passed here is whatever the app currently has — which, right
+// after signup, is a pending_signups id, not a real users id yet. This
+// resolves both: an already-real users.id (old-flow accounts, or after
+// the client has already picked up the swap), and a pending id (new-flow
+// signups) — in the pending case, once promoted it hands back the real
+// users.id the app should now remember instead.
+app.get('/api/users/:id/verification-status', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id, email_verified')
+      .eq('id', id)
+      .maybeSingle();
+    if (userError) throw userError;
+
+    if (userRow) {
+      return res.json({
+        success: true,
+        data: { email_verified: !!userRow.email_verified, id: userRow.id },
+      });
+    }
+
+    const { data: pendingRow, error: pendingError } = await supabase
+      .from('pending_signups')
+      .select('id, promoted_to_user_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (pendingError) throw pendingError;
+
+    if (!pendingRow) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (pendingRow.promoted_to_user_id) {
+      return res.json({
+        success: true,
+        data: { email_verified: true, id: pendingRow.promoted_to_user_id },
+      });
+    }
+
+    res.json({ success: true, data: { email_verified: false, id: pendingRow.id } });
+  } catch (error) {
+    console.error('Verification status error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Re-sends the verification email — the link's 24h expiry, or a lost
+// first email, are the two reasons someone would need this.
+app.post('/api/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required.' });
+  }
+
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // New-flow: still-pending (unpromoted) signup for this email.
+    const { data: pendingMatches, error: pendingError } = await supabase
+      .from('pending_signups')
+      .select('id, email')
+      .ilike('email', normalizedEmail)
+      .is('promoted_to_user_id', null)
+      .limit(1);
+    if (pendingError) throw pendingError;
+    const pending = pendingMatches && pendingMatches[0];
+
+    if (pending) {
+      const { token: verificationToken, expiresAt: verificationExpires } = newVerificationToken();
+      const { error: updateError } = await supabase
+        .from('pending_signups')
+        .update({
+          verification_token: verificationToken,
+          verification_expires: verificationExpires,
+        })
+        .eq('id', pending.id);
+      if (updateError) throw updateError;
+
+      const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+      const sendResult = await sendVerificationEmail(pending.email, verificationToken, baseUrl);
+      if (!sendResult.success) {
+        return res.status(500).json({
+          success: false,
+          message: sendResult.skipped
+            ? 'Email sending is not configured on the server yet.'
+            : 'Could not send the email — try again in a moment.',
+        });
+      }
+
+      return res.json({ success: true, message: 'Verification email resent — check your inbox.' });
+    }
+
+    // Fallback: an already-existing `users` row from before this table
+    // existed, still carrying its own verification token.
+    const { data: matches, error } = await supabase
+      .from('users')
+      .select('id, email, email_verified')
+      .ilike('email', normalizedEmail)
+      .limit(1);
+
+    if (error) throw error;
+    const user = matches && matches[0];
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account with that email.' });
+    }
+    if (user.email_verified) {
+      return res.json({ success: true, message: 'That email is already verified — just log in.' });
+    }
+
+    const { token: verificationToken, expiresAt: verificationExpires } = newVerificationToken();
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        email_verification_token: verificationToken,
+        email_verification_expires: verificationExpires,
+      })
+      .eq('id', user.id);
+
+    if (updateError) throw updateError;
+
+    const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+    const sendResult = await sendVerificationEmail(user.email, verificationToken, baseUrl);
+    if (!sendResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: sendResult.skipped
+          ? 'Email sending is not configured on the server yet.'
+          : 'Could not send the email — try again in a moment.',
+      });
+    }
+
+    res.json({ success: true, message: 'Verification email resent — check your inbox.' });
+  } catch (error) {
+    console.error('Resend verification error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -254,7 +908,7 @@ async function generateAI(prompt, systemPrompt = 'You are a Master Manifestation
 
 // ─── AI Manifestation Blueprint Generator ─────────────────────────────────
 app.post('/api/generate-plan', async (req, res) => {
-  const { user_id, goal_title } = req.body;
+  const { user_id, goal_title, personalize = true } = req.body;
 
   try {
     // 1. Fetch User DNA
@@ -301,36 +955,59 @@ app.post('/api/generate-plan', async (req, res) => {
         tip: validation.tip || 'Try describing a real aspiration, like "I want to build a successful career in tech."'
       });
     }
-    console.log(`✅ Goal is valid, proceeding with generation...`);
+    console.log(`✅ Goal is valid, proceeding with generation... (personalize=${personalize})`);
 
-    // 2. Build the hyper-personalized prompt
+    // 2. Build the prompt — personalized (uses the user's onboarding
+    // answers) unless the client's "AI Personalization" toggle is off, in
+    // which case we deliberately leave those answers out of the prompt.
+    const userProfileBlock = personalize
+      ? `- Name: ${user.full_name}
+      - Goal: "${goal_title}"
+      - Personal answers: ${(user.personal_answers || []).join(', ')}
+      - Family answers: ${(user.family_answers || []).join(', ')}
+      - Professional answers: ${(user.professional_answers || []).join(', ')}`
+      : `- Goal: "${goal_title}"
+      (AI Personalization is off for this user — do not assume any personal, family, or professional background; keep the plan general-purpose.)`;
+
+    const personalizationInstruction = personalize
+      ? `Deeply reference the user's personal and professional background in each pillar.`
+      : `Keep guidance general-purpose and applicable to anyone with this goal — do not invent or assume personal details.`;
+
     const prompt = `
       You are a Master Manifestation Architect and Life Coach.
       
       USER PROFILE:
-      - Name: ${user.full_name}
-      - Goal: "${goal_title}"
-      - Personal answers: ${(user.personal_answers || []).join(', ')}
-      - Family answers: ${(user.family_answers || []).join(', ')}
-      - Professional answers: ${(user.professional_answers || []).join(', ')}
+      ${userProfileBlock}
       
       TASK: Generate a hyper-personalized manifestation blueprint for "${goal_title}".
-      Create 4 unique topical PILLARS (NOT day-by-day steps). Each pillar should be a different angle/dimension of how to manifest this goal.
-      Deeply reference the user's personal and professional background in each pillar.
+
+      First, decide how many PILLARS (NOT day-by-day steps) this SPECIFIC goal genuinely needs to be
+      comprehensively covered — do not default to a fixed number. A narrow, single-focus goal
+      (e.g. "learn to juggle") may only need 3 pillars; a broad, multi-dimensional goal
+      (e.g. "rebuild my entire career and finances") may need up to 7. Never use fewer than 3 or
+      more than 7. Each pillar must be a genuinely distinct angle/dimension of how to manifest this
+      goal — do not pad the count with overlapping or filler pillars just to hit a number.
+
+      Then, for each pillar, decide its own length based on how much that specific angle actually
+      needs to be covered well — a simple, single-idea pillar might only need ~150 words, while a
+      pillar covering a deep psychological shift or multi-step technique might need 400+ words.
+      Do not pad any pillar with filler just to reach a word count, and do not cut a pillar short
+      if the idea genuinely needs more room. Keep the depth and quality of insight consistent across
+      every pillar even as their length varies.
+
+      ${personalizationInstruction}
       
-      Return ONLY this JSON structure:
+      Return ONLY this JSON structure (the number of objects in "pillars" is however many you
+      determined above, between 3 and 7):
       {
         "plan_title": "A profound, unique 6-8 word title for this blueprint",
         "overall_summary": "A 3-sentence powerful summary of why this blueprint works for ${user.full_name} specifically",
         "pillars": [
           {
             "title": "Emoji + Pillar Name (e.g. 🔥 The Identity Breakthrough)",
-            "huge_text": "A rich, 200+ word deep-dive manifesto for this specific pillar. Must reference user's actual answers and goal directly. Include psychological insights, practical techniques, and inspiring language.",
+            "huge_text": "A rich, deep-dive manifesto for this specific pillar, as long as this pillar genuinely needs (roughly 150-400+ words). Must reference user's actual answers and goal directly. Include psychological insights, practical techniques, and inspiring language.",
             "summary": "A 2-sentence crystallized essence of this pillar."
-          },
-          { "title": "...", "huge_text": "200+ words...", "summary": "..." },
-          { "title": "...", "huge_text": "200+ words...", "summary": "..." },
-          { "title": "...", "huge_text": "200+ words...", "summary": "..." }
+          }
         ]
       }
     `;
@@ -344,6 +1021,37 @@ app.post('/api/generate-plan', async (req, res) => {
     const { data: manifestation } = await supabase
       .from('manifestations').insert([{ user_id, goal_title }]).select().single();
 
+    // 4b. Update the streak — stored on the user's own row, completely
+    // separate from the manifestations table, so it survives "Delete All
+    // Manifestations" instead of being recalculated from (and lost with)
+    // that data. Day comparison uses UTC calendar days. Wrapped in its own
+    // try/catch — a streak-column issue (e.g. the migration hasn't been
+    // run yet) should never fail the whole plan-generation request, since
+    // the plan itself already saved successfully above.
+    let newStreak = user.current_streak || 0;
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+      const lastDate = user.last_manifested_date;
+      if (!lastDate) {
+        newStreak = 1;
+      } else if (lastDate === todayStr) {
+        newStreak = user.current_streak || 1; // already manifested today
+      } else {
+        const dayMs = 24 * 60 * 60 * 1000;
+        const diffDays = Math.round(
+          (Date.parse(`${todayStr}T00:00:00Z`) - Date.parse(`${lastDate}T00:00:00Z`)) / dayMs
+        );
+        newStreak = diffDays === 1 ? (user.current_streak || 0) + 1 : 1;
+      }
+      const { error: streakError } = await supabase
+        .from('users')
+        .update({ current_streak: newStreak, last_manifested_date: todayStr })
+        .eq('id', user_id);
+      if (streakError) throw streakError;
+    } catch (streakErr) {
+      console.error('⚠️ Warning: Failed to update streak, but continuing...', streakErr.message);
+    }
+
     const { data: plan } = await supabase
       .from('manifestation_plans')
       .insert([{
@@ -351,7 +1059,7 @@ app.post('/api/generate-plan', async (req, res) => {
         plan_title: aiResponse.plan_title,
         summary: aiResponse.overall_summary,
         full_content: JSON.stringify(aiResponse),
-        audio_url: `https://api.dicebear.com/7.x/avataaars/png?seed=${user_id}`
+        audio_url: null
       }])
       .select().single();
 
@@ -368,7 +1076,22 @@ app.post('/api/generate-plan', async (req, res) => {
       console.error('⚠️ Warning: Failed to save tasks to DB, but continuing...', taskError.message);
     }
 
-    res.json({ success: true, data: { plan, cards: savedTasks || tasks, full_ai: aiResponse } });
+    // 5. Notify the user — fire-and-forget so a push failure never fails the
+    // request. Respects the master "Push Notifications" switch (defaults
+    // true, same as the column) — this is core functionality, not a
+    // "tip", so it isn't gated on manifestation_tips_enabled.
+    if (user.notifications_enabled !== false) {
+      sendPushNotification(user.fcm_token, {
+        title: '✨ Your Manifestation Blueprint is Ready',
+        body: `"${goal_title}" — your personalized plan just landed. Open it now.`,
+        data: { type: 'plan_ready', manifestation_id: manifestation.id },
+      }).catch((err) => console.error('Push notification error (non-fatal):', err.message));
+    }
+
+    res.json({
+      success: true,
+      data: { plan, cards: savedTasks || tasks, full_ai: aiResponse, streak: newStreak },
+    });
 
 
   } catch (error) {
@@ -454,6 +1177,16 @@ app.get('/api/history/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log(`[HISTORY] Fetching history for user ID: ${userId}`);
 
+    // Streak lives on the users row, independent of the manifestations
+    // below — it deliberately survives "Delete All Manifestations" (that
+    // endpoint never touches this column), so wiping your history no
+    // longer wipes a streak you actually earned by showing up daily.
+    const { data: streakUser } = await supabase
+      .from('users')
+      .select('current_streak')
+      .eq('id', userId)
+      .single();
+
     // 1. Fetch manifestations manually
     const { data: manifestations, error: manError } = await supabase
       .from('manifestations')
@@ -486,7 +1219,7 @@ app.get('/api/history/:userId', async (req, res) => {
     }
 
     console.log(`[HISTORY] Found ${historyData.length} items for user.`);
-    res.json({ success: true, data: historyData });
+    res.json({ success: true, data: historyData, streak: streakUser?.current_streak ?? 0 });
 
   } catch (error) {
     console.error('[HISTORY ERROR DETAILS]:', {

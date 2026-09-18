@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../widgets/primary_button.dart';
 import '../../services/user_provider.dart';
+import '../../services/api_service.dart' show EmailNotVerifiedException;
+import '../security/verify_email_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -15,7 +17,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  final TextEditingController _nameSearchController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void initState() {
@@ -33,13 +35,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _fadeController.forward();
   }
 
-  final TextEditingController _passcodeController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _fadeController.dispose();
-    _nameSearchController.dispose();
-    _passcodeController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -64,17 +66,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Enter your name and cosmic passcode to reconnect.',
+              'Enter your email and password to reconnect.',
               textAlign: TextAlign.center,
               style: AppTextStyles.caption.copyWith(color: AppColors.textGrey),
             ),
             20.verticalSpace,
             TextField(
-              controller: _nameSearchController,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
-                hintText: 'Your Full Name...',
+                hintText: 'Your Email...',
                 filled: true,
-                prefixIcon: const Icon(Icons.person_outline, size: 20),
+                prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
                 fillColor: AppColors.surfaceVeryLight,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16.r),
@@ -84,14 +87,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             ),
             12.verticalSpace,
             TextField(
-              controller: _passcodeController,
+              controller: _passwordController,
               obscureText: true,
-              keyboardType: TextInputType.number,
-              maxLength: 4,
               decoration: InputDecoration(
-                hintText: '4-Digit Passcode',
+                hintText: 'Password',
                 filled: true,
-                counterText: "",
                 prefixIcon: const Icon(Icons.lock_outline, size: 20),
                 fillColor: AppColors.surfaceVeryLight,
                 border: OutlineInputBorder(
@@ -115,27 +115,33 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               onPressed: provider.isLoading
                   ? null
                   : () async {
-                      if (_nameSearchController.text.trim().isEmpty) return;
-                      if (_passcodeController.text.length < 4) {
+                      final email = _emailController.text.trim();
+                      if (email.isEmpty || !email.contains('@')) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Please enter your 4-digit passcode 🔒',
-                            ),
+                            content: Text('Please enter a valid email 📧'),
+                          ),
+                        );
+                        return;
+                      }
+                      if (_passwordController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter your password 🔒'),
                           ),
                         );
                         return;
                       }
 
                       try {
-                        final success = await provider.joinExistingProfile(
-                          _nameSearchController.text.trim(),
-                          _passcodeController.text.trim(),
+                        final success = await provider.loginWithEmail(
+                          email,
+                          _passwordController.text,
                         );
                         if (!context.mounted) return;
                         if (success) {
-                          _nameSearchController.clear();
-                          _passcodeController.clear();
+                          _emailController.clear();
+                          _passwordController.clear();
                           Navigator.pop(context); // Close dialog
                           Navigator.pushReplacementNamed(
                             context,
@@ -150,11 +156,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'Identity not found. Try again? 🌌',
+                                'Invalid email or password. Try again? 🌌',
                               ),
                             ),
                           );
                         }
+                      } on EmailNotVerifiedException catch (e) {
+                        // Right password, but the emailed link was never
+                        // tapped — send them to the same waiting screen
+                        // signup uses, instead of a generic error toast.
+                        if (!context.mounted) return;
+                        _passwordController.clear();
+                        Navigator.pop(context); // Close dialog
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => VerifyEmailScreen(
+                              userId: e.userId,
+                              email: e.email,
+                              finishesSignup: false,
+                            ),
+                            settings: const RouteSettings(name: AppRoutes.verifyEmail),
+                          ),
+                        );
                       } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -335,7 +358,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         TextButton(
                           onPressed: _showJoinDialog,
                           child: Text(
-                            'ALREADY HAVE A CONNECTION? JOIN BY NAME',
+                            'ALREADY HAVE AN ACCOUNT? LOG IN',
                             style: AppTextStyles.label.copyWith(
                               color: AppColors.purple.withValues(alpha: 0.5),
                               fontSize: 10.sp,

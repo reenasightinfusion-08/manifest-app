@@ -28,11 +28,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Consumer2<UserProvider, ManifestProvider>(
       builder: (context, userProvider, manifestProvider, _) {
         final manifestedCount = manifestProvider.history.length.toString();
-        // Mock streak logic: if they have manifestations, show a streak relative to count
-        final streakCount = manifestProvider.history.isNotEmpty
-            ? (manifestProvider.history.length + 3).toString()
-            : '0';
-        final goalsCount = manifestProvider.history.length.toString();
+        final streakCount = manifestProvider.streakCount.toString();
+        final goalsCount = manifestProvider.distinctGoalsCount.toString();
 
         return Scaffold(
           backgroundColor: AppColors.white,
@@ -270,17 +267,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       _MenuTile(
                         label: 'App Notifications',
-                        subtitle: 'Reminder frequency and cosmic timing',
+                        subtitle: 'Manage push notifications and updates',
                         icon: Icons.notifications_active_rounded,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Notification settings coming soon! 🔔',
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          AppRoutes.notificationSettings,
+                        ),
                       ),
                       40.verticalSpace,
                       Center(

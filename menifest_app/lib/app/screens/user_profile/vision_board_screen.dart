@@ -184,7 +184,7 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
       ),
       body: Consumer<ManifestProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading) {
+          if (provider.isLoadingHistory) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.purple),
             );

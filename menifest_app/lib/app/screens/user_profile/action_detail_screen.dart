@@ -5,12 +5,14 @@ import '../../../core/common/core.dart';
 import '../../services/manifest_provider.dart';
 
 class ActionDetailScreen extends StatefulWidget {
-  final Map<String, dynamic> cardData;
+  final List<Map<String, dynamic>> steps;
+  final int initialIndex;
   final Map<String, dynamic> plan;
 
   const ActionDetailScreen({
     super.key,
-    required this.cardData,
+    required this.steps,
+    required this.initialIndex,
     required this.plan,
   });
 
@@ -23,10 +25,16 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
   final FlutterTts _flutterTts = FlutterTts();
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late int _currentIndex;
+
+  Map<String, dynamic> get _cardData => widget.steps[_currentIndex];
+  bool get _hasPrevious => _currentIndex > 0;
+  bool get _hasNext => _currentIndex < widget.steps.length - 1;
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, widget.steps.length - 1);
     final provider = context.read<ManifestProvider>();
     _initTts(provider);
     _pulseController = AnimationController(
@@ -36,6 +44,20 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+  }
+
+  // Moves to the next/previous step in place — no popping back out to the
+  // roadmap list and tapping the next card. Stops any playing audio first
+  // since it belongs to whichever step we're leaving.
+  Future<void> _goToStep(int newIndex) async {
+    if (newIndex < 0 || newIndex >= widget.steps.length) return;
+    final provider = context.read<ManifestProvider>();
+    if (provider.isPlaying) {
+      await _flutterTts.stop();
+      provider.setPlaying(false);
+    }
+    if (!mounted) return;
+    setState(() => _currentIndex = newIndex);
   }
 
   void _initTts(ManifestProvider provider) {
@@ -76,7 +98,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
     } else {
       provider.setPlaying(true);
       await _flutterTts.speak(
-        widget.cardData['summary'] ??
+        _cardData['summary'] ??
             widget.plan['summary'] ??
             'Summary loading...',
       );
@@ -170,7 +192,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                                 ),
                               ),
                               child: Text(
-                                'STEP ${widget.cardData['day_number']}',
+                                'STEP ${_cardData['day_number']}',
                                 style: TextStyle(
                                   color: AppColors.white,
                                   fontSize: 10.sp,
@@ -181,7 +203,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                             ),
                             16.verticalSpace,
                             Text(
-                              widget.cardData['task_title'],
+                              _cardData['task_title'],
                               textAlign: TextAlign.center,
                               style: AppTextStyles.headingLarge.copyWith(
                                 color: AppColors.white,
@@ -405,7 +427,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                           ),
                           16.verticalSpace,
                           Text(
-                            widget.cardData['summary'] ??
+                            _cardData['summary'] ??
                                 (widget.plan['summary'] ??
                                     'Synthesizing cosmic intent...'),
                             style: AppTextStyles.bodyMedium.copyWith(
@@ -417,6 +439,36 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                           ),
                         ],
                       ),
+                    ),
+
+                    28.verticalSpace,
+
+                    // ── Step navigation — move straight to the next/
+                    // previous step without popping back to the roadmap.
+                    Row(
+                      children: [
+                        if (_hasPrevious)
+                          Expanded(
+                            child: _StepNavButton(
+                              label: 'Previous',
+                              icon: Icons.arrow_back_rounded,
+                              filled: false,
+                              iconLeading: true,
+                              onTap: () => _goToStep(_currentIndex - 1),
+                            ),
+                          ),
+                        if (_hasPrevious && _hasNext) 12.horizontalSpace,
+                        if (_hasNext)
+                          Expanded(
+                            child: _StepNavButton(
+                              label: 'Next Step',
+                              icon: Icons.arrow_forward_rounded,
+                              filled: true,
+                              iconLeading: false,
+                              onTap: () => _goToStep(_currentIndex + 1),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -459,6 +511,60 @@ class _SpeedButton extends StatelessWidget {
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepNavButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool filled;
+  final bool iconLeading;
+  final VoidCallback onTap;
+
+  const _StepNavButton({
+    required this.label,
+    required this.icon,
+    required this.filled,
+    required this.iconLeading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = Icon(
+      icon,
+      size: 18.sp,
+      color: filled ? AppColors.white : AppColors.purple,
+    );
+    final textWidget = Text(
+      label,
+      style: TextStyle(
+        color: filled ? AppColors.white : AppColors.purple,
+        fontSize: 14.sp,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16.h),
+        decoration: BoxDecoration(
+          gradient: filled
+              ? const LinearGradient(colors: AppColors.primaryGradient)
+              : null,
+          color: filled ? null : AppColors.purple.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(18.r),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: iconLeading
+              ? [iconWidget, 8.horizontalSpace, textWidget]
+              : [textWidget, 8.horizontalSpace, iconWidget],
         ),
       ),
     );

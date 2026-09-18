@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/splash_provider.dart';
 import '../../services/user_provider.dart';
+import '../security/verify_email_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -69,7 +70,25 @@ class _SplashScreenState extends State<SplashScreen>
         if (splash.shouldNavigate) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (user.isLoggedIn) {
-              Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+              if (!user.emailVerified) {
+                // Signed up (or logged in) but never tapped the emailed
+                // link — keep them here instead of the lock screen.
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => VerifyEmailScreen(
+                      userId: user.userId ?? '',
+                      email: user.email ?? '',
+                      finishesSignup: true,
+                    ),
+                    settings: const RouteSettings(name: AppRoutes.verifyEmail),
+                  ),
+                );
+              } else {
+                // Every logged-in, verified user has a password from
+                // onboarding — gate through the lock screen instead of
+                // going straight in.
+                Navigator.of(context).pushReplacementNamed(AppRoutes.appLock);
+              }
             } else {
               Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
             }
@@ -79,9 +98,10 @@ class _SplashScreenState extends State<SplashScreen>
         return Scaffold(
           backgroundColor: AppColors.white,
           body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                 ScaleTransition(
                   scale: _scaleAnimation,
                   child: FadeTransition(
@@ -150,7 +170,8 @@ class _SplashScreenState extends State<SplashScreen>
               ],
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }

@@ -4,6 +4,7 @@ class AppRoutes {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
   static const String home = '/home';
+  static const String appLock = '/appLock';
   static const String welcome = '/welcome';
   static const String security = '/security';
   static const String userInfo = '/userInfo';
@@ -13,4 +14,6 @@ class AppRoutes {
   static const String visionBoard = '/visionBoard';
   static const String spiritualArchetype = '/spiritualArchetype';
   static const String privacySettings = '/privacySettings';
+  static const String notificationSettings = '/notificationSettings';
+  static const String verifyEmail = '/verifyEmail';
 }

@@ -1,5 +1,7 @@
 package com.example.menifest_app
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FlutterFragmentActivity (not FlutterActivity) is required by the
+// local_auth plugin for biometric prompts on Android.
+class MainActivity : FlutterFragmentActivity()
