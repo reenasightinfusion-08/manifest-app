@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const fetch = require('node-fetch');
+
 const nodemailer = require('nodemailer');
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -13,79 +15,20 @@ function newVerificationToken() {
 }
 
 /**
- * Sends email via Gmail SMTP (Nodemailer).
- */
-async function sendViaGmail(toEmail, subject, htmlContent) {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  if (!user || !pass) {
-    throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not set in environment.');
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: { user, pass },
-    connectionTimeout: 10000,
-    greetingTimeout: 5000,
-    socketTimeout: 15000,
-  });
-
-  const info = await transporter.sendMail({
-    from: `"Manifest" <${user}>`,
-    to: toEmail,
-    subject,
-    html: htmlContent,
-  });
-
-  console.log(`📧 Verification email delivered via Gmail SMTP to ${toEmail} (ID: ${info.messageId})`);
-  return { success: true, method: 'gmail' };
-}
-
-/**
- * Sends email via Resend HTTPS API.
- */
-async function sendViaResend(toEmail, subject, htmlContent) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.RESEND_FROM || 'Manifest <onboarding@resend.dev>';
-
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY not set.');
-  }
-
-  const response = await fetch(RESEND_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: fromAddress,
-      to: toEmail,
-      subject,
-      html: htmlContent,
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Resend API ${response.status}: ${errText}`);
-  }
-
-  console.log(`📧 Verification email delivered via Resend to ${toEmail}`);
-  return { success: true, method: 'resend' };
-}
-
-/**
- * Sends the "confirm your email" message. Tries Gmail SMTP or Resend
- * with automatic fallback so emails are reliably delivered to any address.
+ * Sends the "confirm your email" message.
+ * First tries Gmail SMTP (free, sends to ANY recipient with no domain verification).
+ * If Gmail is not configured or fails, falls back to Resend API.
  */
 async function sendVerificationEmail(toEmail, token, baseUrl) {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const resendFrom = process.env.RESEND_FROM || 'Manifest <onboarding@resend.dev>';
+
   const link = `${baseUrl}/api/verify-email?token=${token}`;
-  const subject = 'Verify your email — Manifest';
-  const html = `
-    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; color: #333;">
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
       <h2 style="color: #7B2FF7;">✨ Verify your email</h2>
       <p>Tap the button below to confirm <strong>${toEmail}</strong> and finish setting up your Manifest account.</p>
       <p style="margin: 32px 0;">
@@ -98,45 +41,76 @@ async function sendVerificationEmail(toEmail, token, baseUrl) {
     </div>
   `;
 
-  const isResendSandbox = !process.env.RESEND_FROM || process.env.RESEND_FROM.includes('resend.dev');
-  const errors = [];
+  console.log('\n========================================');
+  console.log(`📧 [Email Service] Attempting to send verification email:`);
+  console.log(`   - To: ${toEmail}`);
+  console.log(`   - Gmail Configured: ${Boolean(gmailUser && gmailPass)} (${gmailUser || 'NONE'})`);
+  console.log(`   - Resend Configured: ${Boolean(resendApiKey)}`);
+  console.log(`   - Link: ${link}`);
+  console.log('========================================\n');
 
-  // If Resend is configured with a verified custom domain, try Resend first.
-  // If Resend is on default test sandbox (resend.dev), try Gmail first because
-  // Resend sandbox will reject any recipient except the Resend account owner.
-  if (!isResendSandbox && process.env.RESEND_API_KEY) {
+  // Strategy 1: Gmail SMTP via Nodemailer (Free, delivers to any address)
+  if (gmailUser && gmailPass) {
     try {
-      return await sendViaResend(toEmail, subject, html);
-    } catch (resendErr) {
-      console.warn('⚠️ Resend failed, attempting Gmail SMTP fallback:', resendErr.message);
-      errors.push(`Resend: ${resendErr.message}`);
+      console.log(`🚀 [Email Service] Trying Gmail SMTP (${gmailUser})...`);
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"Manifest" <${gmailUser}>`,
+        to: toEmail,
+        subject: 'Verify your email — Manifest',
+        html: htmlContent,
+      });
+
+      console.log(`✅ [Email Service] Verification email sent successfully via Gmail SMTP to ${toEmail}: ${info.messageId}`);
+      return { success: true, provider: 'gmail', messageId: info.messageId };
+    } catch (gmailError) {
+      console.error(`⚠️ [Email Service] Gmail SMTP failed: ${gmailError.message}. Trying Resend fallback...`);
     }
   }
 
-  // Try Gmail SMTP
-  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+  // Strategy 2: Resend API (HTTPS REST)
+  if (resendApiKey) {
     try {
-      return await sendViaGmail(toEmail, subject, html);
-    } catch (gmailErr) {
-      console.warn('⚠️ Gmail SMTP failed:', gmailErr.message);
-      errors.push(`Gmail: ${gmailErr.message}`);
+      console.log(`🚀 [Email Service] Trying Resend API (${resendFrom})...`);
+      const response = await fetch(RESEND_API_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: toEmail,
+          subject: 'Verify your email — Manifest',
+          html: htmlContent,
+        }),
+      });
+
+      const responseText = await response.text();
+      console.log(`📬 [Email Service] Resend Status: ${response.status}`);
+
+      if (!response.ok) {
+        console.error(`❌ [Email Service] Resend rejected: ${responseText}`);
+        throw new Error(`Resend API ${response.status}: ${responseText}`);
+      }
+
+      console.log(`✅ [Email Service] Verification email sent successfully via Resend to ${toEmail}`);
+      return { success: true, provider: 'resend', data: responseText };
+    } catch (resendError) {
+      console.error(`❌ [Email Service] Resend API failed: ${resendError.message}`);
+      return { success: false, error: resendError.message };
     }
   }
 
-  // If Gmail failed or wasn't configured, try Resend as a last resort
-  if (isResendSandbox && process.env.RESEND_API_KEY) {
-    try {
-      return await sendViaResend(toEmail, subject, html);
-    } catch (resendErr) {
-      console.warn('⚠️ Resend failed:', resendErr.message);
-      errors.push(`Resend: ${resendErr.message}`);
-    }
-  }
-
-  const finalError = errors.length > 0 ? errors.join(' | ') : 'No email provider configured';
-  console.error('❌ Failed to send verification email:', finalError);
-  return { success: false, error: finalError };
+  console.error('❌ [Email Service] No email provider configured (both Gmail and Resend are unavailable).');
+  return { success: false, skipped: true, error: 'No email service credentials configured.' };
 }
 
 module.exports = { newVerificationToken, sendVerificationEmail };
-

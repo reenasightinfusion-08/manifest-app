@@ -285,7 +285,9 @@ class ApiService {
   /// keeps polling a pending id that no longer resolves to anything new.
   Future<VerificationStatus> checkVerificationStatus(String userId) async {
     try {
+      debugPrint('[ApiService] 🔍 Checking verification status for userId: $userId');
       final response = await _dio.get('/api/users/$userId/verification-status');
+      debugPrint('[ApiService] 📥 Verification status response: ${response.statusCode} -> ${response.data}');
       final data = response.data['data'];
       if (data == null) return VerificationStatus(verified: false, id: userId);
       return VerificationStatus(
@@ -293,7 +295,7 @@ class ApiService {
         id: data['id']?.toString() ?? userId,
       );
     } catch (e) {
-      debugPrint('Failed to check verification status: $e');
+      debugPrint('❌ [ApiService] Failed to check verification status: $e');
       return VerificationStatus(verified: false, id: userId);
     }
   }
@@ -302,13 +304,17 @@ class ApiService {
   /// server's message so the UI can show it directly.
   Future<String> resendVerification(String email) async {
     try {
+      debugPrint('[ApiService] 📨 Requesting resend verification for email: "$email" to ${_dio.options.baseUrl}/api/resend-verification');
       final response = await _dio.post(
         '/api/resend-verification',
         data: {'email': email},
       );
+      debugPrint('[ApiService] 📥 Resend verification response: ${response.statusCode} -> ${response.data}');
       return response.data['message'] ?? 'Verification email sent.';
     } catch (e) {
+      debugPrint('❌ [ApiService] Resend verification failed: $e');
       if (e is DioException && e.response?.data is Map) {
+        debugPrint('❌ [ApiService] Server error data: ${e.response?.data}');
         return e.response?.data['message'] ?? 'Could not resend the email.';
       }
       return 'Could not resend the email. Check your connection.';

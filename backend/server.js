@@ -487,8 +487,14 @@ app.post('/api/users', async (req, res) => {
       // in production (override with PUBLIC_BACKEND_URL if needed).
       if (result?.email) {
         const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+        console.log(`\n📨 [POST /api/users] New signup registered: ${result.email}. Triggering initial verification email...`);
         sendVerificationEmail(result.email, verificationToken, baseUrl)
-          .catch((err) => console.error('Verification email error (non-fatal):', err.message));
+          .then((res) => {
+            console.log(`📨 [POST /api/users] Initial verification email result for ${result.email}:`, res);
+          })
+          .catch((err) => {
+            console.error(`❌ [POST /api/users] Initial verification email error for ${result.email}:`, err.message);
+          });
       }
     }
 
@@ -602,6 +608,7 @@ app.post('/api/login', async (req, res) => {
 // (not JSON) since this is opened directly in a browser.
 app.get('/api/verify-email', async (req, res) => {
   const { token } = req.query;
+  console.log(`\n🔗 [GET /api/verify-email] Verification link accessed with token: "${token ? token.substring(0, 8) + '...' : 'NONE'}"`);
   const htmlPage = (title, message, ok) => res.status(ok ? 200 : 400).send(`
     <!DOCTYPE html>
     <html>
@@ -782,15 +789,19 @@ app.get('/api/users/:id/verification-status', async (req, res) => {
 });
 
 // Re-sends the verification email — the link's 24h expiry, or a lost
+// Re-sends the verification email — the link's 24h expiry, or a lost
 // first email, are the two reasons someone would need this.
 app.post('/api/resend-verification', async (req, res) => {
   const { email } = req.body;
+  console.log(`\n📨 [POST /api/resend-verification] Request received to resend verification email for: "${email}"`);
   if (!email) {
+    console.warn('⚠️ [POST /api/resend-verification] Email parameter was missing in request body.');
     return res.status(400).json({ success: false, message: 'Email is required.' });
   }
 
   try {
     const normalizedEmail = email.trim().toLowerCase();
+    console.log(`🔍 [POST /api/resend-verification] Checking pending_signups for: ${normalizedEmail}`);
 
     // New-flow: still-pending (unpromoted) signup for this email.
     const { data: pendingMatches, error: pendingError } = await supabase
@@ -799,10 +810,14 @@ app.post('/api/resend-verification', async (req, res) => {
       .ilike('email', normalizedEmail)
       .is('promoted_to_user_id', null)
       .limit(1);
-    if (pendingError) throw pendingError;
+    if (pendingError) {
+      console.error('❌ [POST /api/resend-verification] Supabase pending_signups query error:', pendingError);
+      throw pendingError;
+    }
     const pending = pendingMatches && pendingMatches[0];
 
     if (pending) {
+      console.log(`📋 [POST /api/resend-verification] Found pending signup (id: ${pending.id}). Generating fresh token...`);
       const { token: verificationToken, expiresAt: verificationExpires } = newVerificationToken();
       const { error: updateError } = await supabase
         .from('pending_signups')
@@ -811,22 +826,29 @@ app.post('/api/resend-verification', async (req, res) => {
           verification_expires: verificationExpires,
         })
         .eq('id', pending.id);
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ [POST /api/resend-verification] Failed to update pending_signups token:', updateError);
+        throw updateError;
+      }
 
       const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+      console.log(`📧 [POST /api/resend-verification] Calling sendVerificationEmail for pending signup ${pending.email}...`);
       const sendResult = await sendVerificationEmail(pending.email, verificationToken, baseUrl);
+      console.log(`📬 [POST /api/resend-verification] sendVerificationEmail result:`, sendResult);
+
       if (!sendResult.success) {
         return res.status(500).json({
           success: false,
           message: sendResult.skipped
             ? 'Email sending is not configured on the server yet.'
-            : 'Could not send the email — try again in a moment.',
+            : (sendResult.error ? `Could not send email: ${sendResult.error}` : 'Could not send the email — try again in a moment.'),
         });
       }
 
       return res.json({ success: true, message: 'Verification email resent — check your inbox.' });
     }
 
+    console.log(`🔍 [POST /api/resend-verification] Not in pending_signups. Checking users table for: ${normalizedEmail}`);
     // Fallback: an already-existing `users` row from before this table
     // existed, still carrying its own verification token.
     const { data: matches, error } = await supabase
@@ -835,16 +857,22 @@ app.post('/api/resend-verification', async (req, res) => {
       .ilike('email', normalizedEmail)
       .limit(1);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [POST /api/resend-verification] Supabase users query error:', error);
+      throw error;
+    }
     const user = matches && matches[0];
 
     if (!user) {
+      console.warn(`⚠️ [POST /api/resend-verification] No account found in pending_signups or users for: ${normalizedEmail}`);
       return res.status(404).json({ success: false, message: 'No account with that email.' });
     }
     if (user.email_verified) {
+      console.log(`ℹ️ [POST /api/resend-verification] User ${normalizedEmail} is already verified.`);
       return res.json({ success: true, message: 'That email is already verified — just log in.' });
     }
 
+    console.log(`📋 [POST /api/resend-verification] Found unverified user (id: ${user.id}). Generating fresh token...`);
     const { token: verificationToken, expiresAt: verificationExpires } = newVerificationToken();
     const { error: updateError } = await supabase
       .from('users')
@@ -854,22 +882,28 @@ app.post('/api/resend-verification', async (req, res) => {
       })
       .eq('id', user.id);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('❌ [POST /api/resend-verification] Failed to update user token:', updateError);
+      throw updateError;
+    }
 
     const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+    console.log(`📧 [POST /api/resend-verification] Calling sendVerificationEmail for user ${user.email}...`);
     const sendResult = await sendVerificationEmail(user.email, verificationToken, baseUrl);
+    console.log(`📬 [POST /api/resend-verification] sendVerificationEmail result:`, sendResult);
+
     if (!sendResult.success) {
       return res.status(500).json({
         success: false,
         message: sendResult.skipped
           ? 'Email sending is not configured on the server yet.'
-          : 'Could not send the email — try again in a moment.',
+          : (sendResult.error ? `Could not send email: ${sendResult.error}` : 'Could not send the email — try again in a moment.'),
       });
     }
 
     res.json({ success: true, message: 'Verification email resent — check your inbox.' });
   } catch (error) {
-    console.error('Resend verification error:', error.message);
+    console.error('❌ [POST /api/resend-verification] Exception caught:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });

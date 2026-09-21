@@ -77,10 +77,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   Future<void> _resend() async {
+    debugPrint('[VerifyEmailScreen] User clicked "Resend Email" for: ${widget.email}');
     setState(() => _resending = true);
     try {
       final message = await _apiService.resendVerification(widget.email);
+      debugPrint('[VerifyEmailScreen] Resend result message: "$message"');
       _toast(message);
+    } catch (e) {
+      debugPrint('❌ [VerifyEmailScreen] Error in _resend: $e');
+      _toast('Failed to resend: $e');
     } finally {
       if (mounted) setState(() => _resending = false);
     }
