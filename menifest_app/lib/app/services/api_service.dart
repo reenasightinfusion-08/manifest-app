@@ -48,7 +48,9 @@ class ApiService {
       if (saved != null && saved.trim().isNotEmpty) {
         final trimmed = saved.trim();
         // If an old local IP was cached from earlier development, purge it
-        if (trimmed.contains('192.168.') || trimmed.contains('10.0.2.2') || trimmed.contains('localhost')) {
+        if (trimmed.contains('192.168.') ||
+            trimmed.contains('10.0.2.2') ||
+            trimmed.contains('localhost')) {
           await prefs.remove(_prefsKey);
           _dio.options.baseUrl = _defaultBaseUrl;
         } else {
@@ -199,13 +201,17 @@ class ApiService {
   /// link was never tapped (403).
   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
-      debugPrint('🔐 [ApiService] POST ${_dio.options.baseUrl}/api/login (email: $email)');
+      debugPrint(
+        '🔐 [ApiService] POST ${_dio.options.baseUrl}/api/login (email: $email)',
+      );
       final response = await _dio.post(
         '/api/login',
         data: {'email': email, 'password': password},
       );
 
-      debugPrint('✅ [ApiService] Login response (${response.statusCode}): ${response.data}');
+      debugPrint(
+        '✅ [ApiService] Login response (${response.statusCode}): ${response.data}',
+      );
       if (response.statusCode == 200) {
         return response.data['data'];
       }
@@ -213,7 +219,9 @@ class ApiService {
     } catch (e) {
       debugPrint('❌ [ApiService] Login failed: $e');
       if (e is DioException) {
-        debugPrint('🔍 [ApiService] DioException Details: status=${e.response?.statusCode}, type=${e.type}, url=${e.requestOptions.uri}, data=${e.response?.data}');
+        debugPrint(
+          '🔍 [ApiService] DioException Details: status=${e.response?.statusCode}, type=${e.type}, url=${e.requestOptions.uri}, data=${e.response?.data}',
+        );
         if (e.response?.statusCode == 403 &&
             e.response?.data is Map &&
             e.response?.data['email_verified'] == false) {
@@ -227,12 +235,19 @@ class ApiService {
           return null; // Invalid credentials
         }
         if (e.response?.statusCode == 404) {
-          throw Exception('Endpoint /api/login returned 404 Not Found on ${_dio.options.baseUrl}');
+          throw Exception(
+            'Endpoint /api/login returned 404 Not Found on ${_dio.options.baseUrl}',
+          );
         }
-        if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
-          throw Exception('Cannot connect to ${_dio.options.baseUrl}. Check internet connection.');
+        if (e.type == DioExceptionType.connectionError ||
+            e.type == DioExceptionType.connectionTimeout) {
+          throw Exception(
+            'Cannot connect to ${_dio.options.baseUrl}. Check internet connection.',
+          );
         }
-        throw Exception('Server error (${e.response?.statusCode ?? e.type}): ${e.response?.data ?? e.message}');
+        throw Exception(
+          'Server error (${e.response?.statusCode ?? e.type}): ${e.response?.data ?? e.message}',
+        );
       }
       rethrow;
     }
@@ -322,9 +337,12 @@ class ApiService {
       if (e is DioException) {
         String? serverMessage;
         if (e.response?.data != null && e.response?.data is Map) {
-          serverMessage = e.response?.data['message'] ?? e.response?.data['error'];
+          serverMessage =
+              e.response?.data['message'] ?? e.response?.data['error'];
         }
-        throw Exception('Failed to manifest your plan: ${serverMessage ?? e.message}');
+        throw Exception(
+          'Failed to manifest your plan: ${serverMessage ?? e.message}',
+        );
       }
       throw Exception('Failed to manifest your plan: $e');
     }
@@ -346,9 +364,8 @@ class ApiService {
   /// Same call as [getManifestationHistory], but also returns the user's
   /// current streak — which lives on the `users` row, not the
   /// manifestations themselves, so it survives even after they're deleted.
-  Future<({List<dynamic> history, int streak})> getManifestationHistoryWithStreak(
-    String userId,
-  ) async {
+  Future<({List<dynamic> history, int streak})>
+  getManifestationHistoryWithStreak(String userId) async {
     try {
       final response = await _dio.get('/api/history/$userId');
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -384,9 +401,12 @@ class ApiService {
       if (e is DioException) {
         String? serverMessage;
         if (e.response?.data != null && e.response?.data is Map) {
-          serverMessage = e.response?.data['message'] ?? e.response?.data['error'];
+          serverMessage =
+              e.response?.data['message'] ?? e.response?.data['error'];
         }
-        throw Exception('Failed to clear manifestations: ${serverMessage ?? e.message}');
+        throw Exception(
+          'Failed to clear manifestations: ${serverMessage ?? e.message}',
+        );
       }
       throw Exception('Failed to clear manifestations: $e');
     }
@@ -400,9 +420,12 @@ class ApiService {
       if (e is DioException) {
         String? serverMessage;
         if (e.response?.data != null && e.response?.data is Map) {
-          serverMessage = e.response?.data['message'] ?? e.response?.data['error'];
+          serverMessage =
+              e.response?.data['message'] ?? e.response?.data['error'];
         }
-        throw Exception('Failed to delete account: ${serverMessage ?? e.message}');
+        throw Exception(
+          'Failed to delete account: ${serverMessage ?? e.message}',
+        );
       }
       throw Exception('Failed to delete account: $e');
     }
@@ -419,9 +442,12 @@ class ApiService {
       if (e is DioException) {
         String? serverMessage;
         if (e.response?.data != null && e.response?.data is Map) {
-          serverMessage = e.response?.data['message'] ?? e.response?.data['error'];
+          serverMessage =
+              e.response?.data['message'] ?? e.response?.data['error'];
         }
-        throw Exception('Failed to discover your archetype: ${serverMessage ?? e.message}');
+        throw Exception(
+          'Failed to discover your archetype: ${serverMessage ?? e.message}',
+        );
       }
       throw Exception('Failed to discover your archetype: $e');
     }
