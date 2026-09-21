@@ -6,18 +6,25 @@ const { createClient } = require('@supabase/supabase-js');
 let initialized = false;
 
 function loadServiceAccount() {
-  // Preferred: a path to the downloaded service-account JSON file (local dev).
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-    const resolved = path.resolve(__dirname, '..', process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
-    return JSON.parse(fs.readFileSync(resolved, 'utf8'));
-  }
-  // Alternative: paste the whole JSON into one env var (handy on Vercel).
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    return JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-  }
-  // Alternative: base64-encoded JSON (avoids quoting issues in some env UIs).
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-    return JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
+  try {
+    // Preferred: a path to the downloaded service-account JSON file (local dev).
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+      const resolved = path.resolve(__dirname, '..', process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+      if (fs.existsSync(resolved)) {
+        return JSON.parse(fs.readFileSync(resolved, 'utf8'));
+      }
+    }
+    // Alternative: paste the whole JSON into one env var (handy on Vercel).
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      return JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    }
+    // Alternative: base64-encoded JSON (avoids quoting issues in some env UIs).
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+      const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64.trim(), 'base64').toString('utf8');
+      return JSON.parse(decoded);
+    }
+  } catch (err) {
+    console.error('❌ Failed to parse Firebase service account credentials:', err.message);
   }
   return null;
 }
@@ -31,10 +38,14 @@ function initFirebaseAdmin() {
     return;
   }
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  initialized = true;
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    initialized = true;
+  } catch (err) {
+    console.error('❌ Failed to initialize Firebase Admin:', err.message);
+  }
 }
 
 /**
