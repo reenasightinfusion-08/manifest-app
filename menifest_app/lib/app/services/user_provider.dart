@@ -583,6 +583,9 @@ class UserProvider with ChangeNotifier {
         return true;
       }
       return false;
+    } catch (e) {
+      debugPrint('❌ [UserProvider] loginWithEmail error: $e');
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();

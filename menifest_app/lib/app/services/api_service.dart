@@ -21,11 +21,10 @@ class VerificationStatus {
 }
 
 class ApiService {
-  // Build-time default (still works if you want it):
-  //   flutter build apk --dart-define=API_BASE_URL=http://<your-pc-ip>:3000
+  // Build-time default or fallback:
   static const String _defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.29.88:3000',
+    defaultValue: 'https://backend-mu-tawny-16.vercel.app',
   );
 
   static const String _prefsKey = 'server_base_url';
@@ -41,14 +40,20 @@ class ApiService {
   );
 
   /// Call once at app startup (before runApp) to restore any server address
-  /// the user saved on this device previously — so a release build keeps
-  /// working after the PC's LAN IP changes, with no rebuild needed.
+  /// the user saved on this device previously.
   static Future<void> loadSavedBaseUrl() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_prefsKey);
       if (saved != null && saved.trim().isNotEmpty) {
-        _dio.options.baseUrl = saved.trim();
+        final trimmed = saved.trim();
+        // If an old local IP was cached from earlier development, purge it
+        if (trimmed.contains('192.168.') || trimmed.contains('10.0.2.2') || trimmed.contains('localhost')) {
+          await prefs.remove(_prefsKey);
+          _dio.options.baseUrl = _defaultBaseUrl;
+        } else {
+          _dio.options.baseUrl = trimmed;
+        }
       }
     } catch (e) {
       debugPrint('Could not load saved server address: $e');
@@ -194,17 +199,21 @@ class ApiService {
   /// link was never tapped (403).
   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
+      debugPrint('🔐 [ApiService] POST ${_dio.options.baseUrl}/api/login (email: $email)');
       final response = await _dio.post(
         '/api/login',
         data: {'email': email, 'password': password},
       );
 
+      debugPrint('✅ [ApiService] Login response (${response.statusCode}): ${response.data}');
       if (response.statusCode == 200) {
         return response.data['data'];
       }
       return null;
     } catch (e) {
+      debugPrint('❌ [ApiService] Login failed: $e');
       if (e is DioException) {
+        debugPrint('🔍 [ApiService] DioException Details: status=${e.response?.statusCode}, type=${e.type}, url=${e.requestOptions.uri}, data=${e.response?.data}');
         if (e.response?.statusCode == 403 &&
             e.response?.data is Map &&
             e.response?.data['email_verified'] == false) {
@@ -214,9 +223,16 @@ class ApiService {
             email: data?['email']?.toString() ?? email,
           );
         }
-        if (e.response?.statusCode == 404 || e.response?.statusCode == 401) {
-          return null;
+        if (e.response?.statusCode == 401) {
+          return null; // Invalid credentials
         }
+        if (e.response?.statusCode == 404) {
+          throw Exception('Endpoint /api/login returned 404 Not Found on ${_dio.options.baseUrl}');
+        }
+        if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
+          throw Exception('Cannot connect to ${_dio.options.baseUrl}. Check internet connection.');
+        }
+        throw Exception('Server error (${e.response?.statusCode ?? e.type}): ${e.response?.data ?? e.message}');
       }
       rethrow;
     }

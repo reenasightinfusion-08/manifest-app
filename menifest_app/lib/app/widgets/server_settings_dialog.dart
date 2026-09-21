@@ -40,7 +40,7 @@ void showServerSettingsDialog(BuildContext context) {
                   controller: controller,
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
-                    hintText: 'http://192.168.x.x:3000',
+                    hintText: 'https://backend-mu-tawny-16.vercel.app',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.r),
                     ),
