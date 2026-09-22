@@ -355,8 +355,10 @@ app.post('/api/users', async (req, res) => {
       ...(professional_answers || [])
     ].filter(a => a && a.trim().length > 0);
 
-    if (allAnswers.length > 0) {
-      console.log(`🔍 Validating profile answers for: "${full_name}"...`);
+    // Only run expensive AI validation on brand-new signups (!id) to catch spam bots.
+    // Existing users editing answers in their profile save immediately without a 5-10s LLM delay.
+    if (!id && allAnswers.length > 0) {
+      console.log(`🔍 Validating profile answers for new user: "${full_name}"...`);
       const validationPrompt = `
         You are a strict Profile Validator. Analyze the user's answers to an onboarding survey and decide if they are valid, meaningful, and appropriate.
 

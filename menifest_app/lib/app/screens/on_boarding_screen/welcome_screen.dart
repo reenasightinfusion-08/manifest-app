@@ -160,7 +160,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               email: e.email,
                               finishesSignup: false,
                             ),
-                            settings: const RouteSettings(name: AppRoutes.verifyEmail),
+                            settings: const RouteSettings(
+                              name: AppRoutes.verifyEmail,
+                            ),
                           ),
                         );
                       } catch (e) {
@@ -334,10 +336,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       children: [
                         PrimaryButton(
                           label: 'Begin My Transformation',
-                          onPressed: () => Navigator.pushReplacementNamed(
-                            context,
-                            AppRoutes.userInfo,
-                          ),
+                          onPressed: () =>
+                              Navigator.pushNamed(context, AppRoutes.userInfo),
                         ),
                         16.verticalSpace,
                         TextButton(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:menifest_app/app/services/user_provider.dart';
+import 'package:menifest_app/app/widgets/primary_button.dart';
+import 'package:menifest_app/core/common/core.dart';
 import 'package:provider/provider.dart';
-import '../../../core/common/core.dart';
-import '../../services/user_provider.dart';
-import '../../widgets/primary_button.dart';
 
 class SpiritualArchetypeScreen extends StatefulWidget {
   const SpiritualArchetypeScreen({super.key});
@@ -116,18 +116,6 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.refresh_rounded, color: palette[0]),
-                tooltip: 'Regenerate',
-                onPressed: () {
-                  if (userProvider.userId != null) {
-                    userProvider.fetchArchetype();
-                  }
-                },
-              ),
-              8.horizontalSpace,
-            ],
           ),
           body: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 40.h),
@@ -177,10 +165,7 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
                 // Pattern insight — the "what's new here" section, only
                 // shown when the AI actually returned one.
                 if (patternText.isNotEmpty) ...[
-                  _SectionHeader(
-                    title: patternLabel,
-                    icon: Icons.hub_rounded,
-                  ),
+                  _SectionHeader(title: patternLabel, icon: Icons.hub_rounded),
                   12.verticalSpace,
                   _VisionCard(text: patternText, color: palette[1]),
                   28.verticalSpace,
@@ -194,10 +179,7 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
                       .map(
                         (s) => Padding(
                           padding: EdgeInsets.only(bottom: 10.h),
-                          child: _StrengthCard(
-                            strength: s,
-                            color: palette[0],
-                          ),
+                          child: _StrengthCard(strength: s, color: palette[0]),
                         ),
                       )
                       .toList(),
@@ -244,66 +226,7 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
 
   // ── Loading Screen ─────────────────────────────────────────────────────
   Widget _buildLoadingScreen() {
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      body: Stack(
-        children: [
-          // Gradient header placeholder
-          Container(
-            height: 250.h,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF7B2FF7), Color(0xFFE91E8C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  100.verticalSpace,
-                  Container(
-                    width: 80.w,
-                    height: 80.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.surfaceLight,
-                    ),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.purple,
-                        strokeWidth: 3,
-                      ),
-                    ),
-                  ),
-                  32.verticalSpace,
-                  Text(
-                    'Reading Your Cosmic DNA...',
-                    style: AppTextStyles.headingMedium.copyWith(
-                      color: AppColors.textDark,
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  12.verticalSpace,
-                  Text(
-                    'The universe is crafting your unique\nspiritual archetype',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textGrey,
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const _ArchetypeLoadingScreen();
   }
 
   // ── Error Screen ───────────────────────────────────────────────────────
@@ -431,10 +354,7 @@ class _StrengthCard extends StatelessWidget {
               Container(
                 width: 8.w,
                 height: 8.w,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               8.horizontalSpace,
               Expanded(
@@ -486,6 +406,125 @@ class _VisionCard extends StatelessWidget {
         style: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.textDark,
           height: 1.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _ArchetypeLoadingScreen extends StatefulWidget {
+  const _ArchetypeLoadingScreen();
+
+  @override
+  State<_ArchetypeLoadingScreen> createState() =>
+      _ArchetypeLoadingScreenState();
+}
+
+class _ArchetypeLoadingScreenState extends State<_ArchetypeLoadingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _sparkle(double dx, double dy, double phase) {
+    final t = (phase % 1.0);
+    // Smooth triangular wave for breathing pulse
+    final wave = 1.0 - (t - 0.5).abs() * 2;
+    final opacity = (0.35 + 0.65 * wave).clamp(0.2, 1.0);
+    final scale = 0.85 + 0.35 * wave;
+
+    return Transform.translate(
+      offset: Offset(dx, dy),
+      child: Transform.scale(
+        scale: scale,
+        child: Opacity(
+          opacity: opacity,
+          child: Text(
+            '✦',
+            style: TextStyle(fontSize: 16.sp, color: const Color(0xFFAB6FF5)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F5FF),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textDark,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            final t = _controller.value;
+            // Gentle floating bob
+            final floatOffset = -10.0 * (1.0 - (t - 0.5).abs() * 2);
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    _sparkle(-46, -18, (t + 0.1) % 1.0),
+                    _sparkle(44, -26, (t + 0.4) % 1.0),
+                    _sparkle(-34, 30, (t + 0.7) % 1.0),
+                    _sparkle(40, 26, (t + 0.25) % 1.0),
+                    Transform.translate(
+                      offset: Offset(0, floatOffset),
+                      child: Text('🚀', style: TextStyle(fontSize: 64.sp)),
+                    ),
+                  ],
+                ),
+                22.verticalSpace,
+                Text(
+                  'Reading Your Cosmic DNA... ✨',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.headingMedium.copyWith(
+                    color: AppColors.purple,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22.sp,
+                  ),
+                ),
+                10.verticalSpace,
+                Text(
+                  'The universe is crafting your unique\nspiritual archetype',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textGrey,
+                    height: 1.5,
+                    fontSize: 13.sp,
+                  ),
+                ),
+                40.verticalSpace,
+              ],
+            );
+          },
         ),
       ),
     );

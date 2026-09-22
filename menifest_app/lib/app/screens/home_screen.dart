@@ -16,6 +16,39 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _dreamController = TextEditingController();
   String? _lastHandledGoal;
 
+  static const List<Map<String, String>> _promptCategories = [
+    {
+      'label': 'Career Growth',
+      'icon': 'trending_up',
+      'prompt':
+          'I want to accelerate my career growth, step into leadership, and lead impactful initiatives with clarity and confidence.',
+    },
+    {
+      'label': 'Financial Freedom',
+      'icon': 'account_balance_wallet',
+      'prompt':
+          'I want to build lasting financial independence, unlock multiple income streams, and cultivate an abundance mindset.',
+    },
+    {
+      'label': 'Clarity & Focus',
+      'icon': 'psychology',
+      'prompt':
+          'I want to cultivate deep mental clarity, master my daily habits, and live with focused intent and inner calmness.',
+    },
+    {
+      'label': 'Deep Connections',
+      'icon': 'favorite',
+      'prompt':
+          'I want to attract and nurture authentic, meaningful relationships grounded in mutual respect, trust, and shared growth.',
+    },
+    {
+      'label': 'Peak Health',
+      'icon': 'bolt',
+      'prompt':
+          'I want to optimize my physical and mental energy through restorative sleep, disciplined movement, and vibrant wellness.',
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +78,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _applyPrompt(String prompt) {
+    _dreamController.text = prompt;
+    _dreamController.selection = TextSelection.fromPosition(
+      TextPosition(offset: prompt.length),
+    );
+    setState(() {});
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  IconData _getCategoryIcon(String name) {
+    switch (name) {
+      case 'trending_up':
+        return Icons.trending_up_rounded;
+      case 'account_balance_wallet':
+        return Icons.account_balance_wallet_outlined;
+      case 'psychology':
+        return Icons.psychology_outlined;
+      case 'favorite':
+        return Icons.favorite_border_rounded;
+      case 'bolt':
+        return Icons.bolt_rounded;
+      default:
+        return Icons.auto_awesome_rounded;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ManifestProvider>(
@@ -70,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 backgroundColor: AppColors.purple,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(14.r),
                 ),
                 duration: const Duration(seconds: 3),
               ),
@@ -78,21 +143,28 @@ class _HomeScreenState extends State<HomeScreen> {
             provider.clearDuplicateError();
           });
         }
+
+        final user = context.watch<UserProvider>();
+        final displayName = user.name.trim().isNotEmpty
+            ? user.name.trim().split(' ').first
+            : 'there';
+
         return Scaffold(
           backgroundColor: AppColors.white,
           body: Stack(
             children: [
+              // Refined subtle atmospheric light gradients
               Positioned(
-                top: -100.h,
+                top: -120.h,
                 right: -80.w,
                 child: Container(
-                  width: 350.w,
-                  height: 350.w,
+                  width: 360.w,
+                  height: 360.w,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppColors.purple.withValues(alpha: 0.08),
+                        AppColors.purple.withValues(alpha: 0.1),
                         AppColors.transparent,
                       ],
                     ),
@@ -100,8 +172,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Positioned(
-                top: 150.h,
-                left: -120.w,
+                top: 240.h,
+                left: -100.w,
                 child: Container(
                   width: 300.w,
                   height: 300.w,
@@ -109,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppColors.pink.withValues(alpha: 0.06),
+                        AppColors.pink.withValues(alpha: 0.07),
                         AppColors.transparent,
                       ],
                     ),
@@ -119,69 +191,104 @@ class _HomeScreenState extends State<HomeScreen> {
 
               SafeArea(
                 child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.symmetric(
-                    horizontal: 24.w,
+                    horizontal: 22.w,
                     vertical: 16.h,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ── Header: Modern, Crisp & Clean ─────────────────────
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'WELCOME BACK',
-                                style: AppTextStyles.label.copyWith(
-                                  color: AppColors.purple,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 2,
-                                  fontSize: 12.sp,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 6.r,
+                                      height: 6.r,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: AppColors.purple,
+                                      ),
+                                    ),
+                                    8.horizontalSpace,
+                                    Text(
+                                      'MANIFESTATION PLATFORM',
+                                      style: TextStyle(
+                                        color: AppColors.purple,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.5,
+                                        fontSize: 10.5.sp,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              Text(
-                                'Your Journey ✨',
-                                style: AppTextStyles.headingLarge.copyWith(
-                                  color: AppColors.textDark,
-                                  fontSize: 26.sp,
-                                  fontWeight: FontWeight.w900,
+                                6.verticalSpace,
+                                Text(
+                                  '${_getGreeting()}, $displayName',
+                                  style: AppTextStyles.headingLarge.copyWith(
+                                    color: AppColors.textDark,
+                                    fontSize: 24.sp,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                          14.horizontalSpace,
+                          // Refined Profile Avatar
                           GestureDetector(
                             onTap: () =>
                                 Navigator.pushNamed(context, AppRoutes.profile),
-                            child: Consumer<UserProvider>(
-                              builder: (context, userProvider, _) {
-                                return Container(
-                                  width: 48.w,
-                                  height: 48.w,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.surfaceLight,
-                                    border: Border.all(
-                                      color: AppColors.borderLight,
-                                      width: 1.5.w,
+                            child: Container(
+                              padding: EdgeInsets.all(2.r),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: AppColors.primaryGradient,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.purple.withValues(
+                                      alpha: 0.2,
                                     ),
-                                    image: DecorationImage(
-                                      image: NetworkImage(
-                                        userProvider.profileImage,
-                                      ),
-                                      fit: BoxFit.cover,
-                                    ),
+                                    blurRadius: 10.r,
+                                    offset: Offset(0, 4.h),
                                   ),
-                                );
-                              },
+                                ],
+                              ),
+                              child: Container(
+                                width: 44.w,
+                                height: 44.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.white,
+                                  image: DecorationImage(
+                                    image: NetworkImage(user.profileImage),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
 
-                      32.verticalSpace,
+                      20.verticalSpace,
 
+                      // ── Hero Banner: Vibrant, Sleek & Modern ──────────────
                       Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
@@ -191,78 +298,129 @@ class _HomeScreenState extends State<HomeScreen> {
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(24.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.purple.withValues(alpha: 0.28),
+                              blurRadius: 24.r,
+                              offset: Offset(0, 10.h),
+                            ),
+                          ],
                         ),
                         child: Stack(
                           children: [
                             Positioned(
-                              right: -30.w,
-                              top: -30.h,
+                              right: -20.w,
+                              top: -20.h,
                               child: Container(
-                                width: 120.w,
-                                height: 120.h,
+                                width: 140.w,
+                                height: 140.w,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: AppColors.white.withValues(alpha: 0.1),
+                                  color: Colors.white.withValues(alpha: 0.08),
                                 ),
                               ),
                             ),
                             Positioned(
-                              left: -20.w,
-                              bottom: -20.h,
+                              left: 40.w,
+                              bottom: -40.h,
                               child: Container(
-                                width: 80.w,
-                                height: 80.h,
+                                width: 100.w,
+                                height: 100.w,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: AppColors.white.withValues(alpha: 0.1),
+                                  color: Colors.white.withValues(alpha: 0.06),
                                 ),
                               ),
                             ),
                             Padding(
-                              padding: EdgeInsets.all(16.r),
+                              padding: EdgeInsets.all(22.r),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 12.w,
-                                      vertical: 6.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white.withValues(
-                                        alpha: 0.2,
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w,
+                                          vertical: 5.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            16.r,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'VISION TO REALITY',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 10.sp,
+                                            letterSpacing: 1.4,
+                                          ),
+                                        ),
                                       ),
-                                      borderRadius: BorderRadius.circular(20.r),
-                                    ),
-                                    child: Text(
-                                      'MANIFEST TODAY',
-                                      style: TextStyle(
-                                        color: AppColors.white,
-                                        fontSize: 10.sp,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1.5,
-                                      ),
-                                    ),
+                                      if (provider.streakCount > 0)
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 10.w,
+                                            vertical: 5.h,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              16.r,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons
+                                                    .local_fire_department_rounded,
+                                                color: Colors.white,
+                                                size: 14.sp,
+                                              ),
+                                              4.horizontalSpace,
+                                              Text(
+                                                '${provider.streakCount} Day Streak',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 11.sp,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                   16.verticalSpace,
                                   Text(
                                     'What will you\ncreate today?',
-                                    style: AppTextStyles.headingLarge.copyWith(
-                                      color: AppColors.white,
+                                    style: TextStyle(
+                                      color: Colors.white,
                                       fontWeight: FontWeight.w900,
+                                      fontSize: 25.sp,
                                       height: 1.2,
-                                      fontSize: 24.sp,
+                                      letterSpacing: -0.5,
                                     ),
                                   ),
-                                  12.verticalSpace,
+                                  10.verticalSpace,
                                   Text(
-                                    'Describe your vision clearly. The universe is listening and ready to help you plan.',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: AppColors.white.withValues(
+                                    'Define your ambition with precision. The system translates your vision into an actionable daily roadmap.',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
                                         alpha: 0.9,
                                       ),
-                                      height: 1.5,
-                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: 13.5.sp,
+                                      height: 1.45,
                                     ),
                                   ),
                                 ],
@@ -272,77 +430,204 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
 
-                      22.verticalSpace,
+                      20.verticalSpace,
 
+                      // ── Guided Focus Chips (Refined, Modern Category Pills) ─
+                      Text(
+                        'Focus Areas',
+                        style: TextStyle(
+                          color: AppColors.textDark,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13.5.sp,
+                        ),
+                      ),
+                      10.verticalSpace,
+                      SizedBox(
+                        height: 38.h,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: _promptCategories.length,
+                          separatorBuilder: (context, index) =>
+                              8.horizontalSpace,
+                          itemBuilder: (context, index) {
+                            final cat = _promptCategories[index];
+                            return InkWell(
+                              onTap: () => _applyPrompt(cat['prompt']!),
+                              borderRadius: BorderRadius.circular(18.r),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 14.w,
+                                  vertical: 8.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceLight,
+                                  borderRadius: BorderRadius.circular(18.r),
+                                  border: Border.all(
+                                    color: AppColors.borderLight,
+                                    width: 1.w,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _getCategoryIcon(cat['icon']!),
+                                      size: 15.sp,
+                                      color: AppColors.purple,
+                                    ),
+                                    8.horizontalSpace,
+                                    Text(
+                                      cat['label']!,
+                                      style: TextStyle(
+                                        color: AppColors.textDark,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      18.verticalSpace,
+
+                      // ── Intention Canvas (Elevated, Crisp Writing Space) ───
                       AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                        duration: const Duration(milliseconds: 250),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceLight,
-                          borderRadius: BorderRadius.circular(20.r),
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(22.r),
                           border: Border.all(
                             color: provider.isFocused
-                                ? AppColors.pink
+                                ? AppColors.purple
                                 : AppColors.borderLight,
-                            width: provider.isFocused ? 1.5.w : 1.w,
+                            width: provider.isFocused ? 1.8.w : 1.w,
                           ),
                           boxShadow: [
                             BoxShadow(
                               color: provider.isFocused
-                                  ? AppColors.glowPink.withValues(alpha: 0.15)
-                                  : AppColors.black.withValues(alpha: 0.02),
-                              blurRadius: provider.isFocused ? 16.r : 8.r,
+                                  ? AppColors.purple.withValues(alpha: 0.12)
+                                  : AppColors.purple.withValues(alpha: 0.04),
+                              blurRadius: provider.isFocused ? 18.r : 10.r,
                               offset: Offset(0, 4.h),
                             ),
                           ],
                         ),
-                        child: Padding(
-                          padding: EdgeInsets.all(4.r),
-                          child: Focus(
-                            onFocusChange: (focus) =>
-                                provider.setFocused(focus),
-                            child: TextField(
-                              controller: _dreamController,
-                              textCapitalization: TextCapitalization.sentences,
-                              maxLines: 5,
-                              textInputAction: TextInputAction.send,
-                              onSubmitted: (_) => _submitManifestation(provider),
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textDark,
-                                fontWeight: FontWeight.w500,
-                                height: 1.6,
-                                fontSize: 14.sp,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                18.w,
+                                14.h,
+                                14.w,
+                                4.h,
                               ),
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: AppColors.transparent,
-                                hintText:
-                                    'E.g., I want to become a successful entrepreneur and build my own startup that helps people...',
-                                hintStyle: AppTextStyles.hint.copyWith(
-                                  color: AppColors.textLightGrey,
-                                  fontSize: 14.sp,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 20.w,
-                                  vertical: 20.h,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.edit_note_rounded,
+                                        color: AppColors.purple,
+                                        size: 18.sp,
+                                      ),
+                                      8.horizontalSpace,
+                                      Text(
+                                        'YOUR GOAL',
+                                        style: TextStyle(
+                                          color: AppColors.purple,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.3,
+                                          fontSize: 11.sp,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  ValueListenableBuilder<TextEditingValue>(
+                                    valueListenable: _dreamController,
+                                    builder: (context, value, _) {
+                                      if (value.text.isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return GestureDetector(
+                                        onTap: () {
+                                          _dreamController.clear();
+                                          setState(() {});
+                                        },
+                                        child: Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 6.w,
+                                            vertical: 2.h,
+                                          ),
+                                          child: Text(
+                                            'Clear',
+                                            style: TextStyle(
+                                              color: AppColors.textGrey,
+                                              fontSize: 11.5.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                18.w,
+                                6.h,
+                                18.w,
+                                16.h,
+                              ),
+                              child: Focus(
+                                onFocusChange: (focus) =>
+                                    provider.setFocused(focus),
+                                child: TextField(
+                                  controller: _dreamController,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  maxLines: 4,
+                                  textInputAction: TextInputAction.send,
+                                  onSubmitted: (_) =>
+                                      _submitManifestation(provider),
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.textDark,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.5,
+                                    fontSize: 14.5.sp,
+                                  ),
+                                  decoration: InputDecoration(
+                                    filled: false,
+                                    hintText:
+                                        'Describe what you want to achieve with specific clarity and intention...',
+                                    hintStyle: TextStyle(
+                                      color: AppColors.textLightGrey,
+                                      fontSize: 13.5.sp,
+                                      height: 1.45,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
 
+                      // ── Submit / Generate Action Button ────────────────────
                       ValueListenableBuilder<TextEditingValue>(
                         valueListenable: _dreamController,
                         builder: (context, value, child) {
@@ -359,11 +644,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           }
                           return Column(
                             children: [
-                              32.verticalSpace,
+                              16.verticalSpace,
                               PrimaryButton(
-                                label: 'Get My Action Plan ✨',
-                                onPressed: () =>
-                                    _submitManifestation(provider),
+                                label: provider.isLoading
+                                    ? 'Generating Action Roadmap... ✨'
+                                    : 'Build My Action Plan ✨',
+                                onPressed: () => _submitManifestation(provider),
                                 isLoading: provider.isLoading,
                               ),
                             ],
@@ -371,12 +657,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
 
-                      // ── Invalid Input Info Card ───────────────────────────
+                      // ── Invalid Input Warning Card ────────────────────────
                       if (provider.invalidReason != null) ...[
-                        24.verticalSpace,
+                        20.verticalSpace,
                         Container(
                           width: double.infinity,
-                          padding: EdgeInsets.all(20.r),
+                          padding: EdgeInsets.all(18.r),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF8E1),
                             borderRadius: BorderRadius.circular(20.r),
@@ -399,24 +685,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Container(
-                                    padding: EdgeInsets.all(8.r),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFFFFCC02,
-                                      ).withValues(alpha: 0.2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.lightbulb_outline_rounded,
-                                      color: const Color(0xFFE6A800),
-                                      size: 20.sp,
-                                    ),
+                                  Icon(
+                                    Icons.lightbulb_outline_rounded,
+                                    color: const Color(0xFFE6A800),
+                                    size: 20.sp,
                                   ),
-                                  12.horizontalSpace,
+                                  10.horizontalSpace,
                                   Text(
-                                    'Not a valid manifestation goal',
-                                    style: AppTextStyles.bodyMedium.copyWith(
+                                    'Refine your goal statement',
+                                    style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       color: const Color(0xFF7A5800),
                                       fontSize: 14.sp,
@@ -424,22 +701,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ],
                               ),
-                              16.verticalSpace,
+                              12.verticalSpace,
                               Text(
                                 provider.invalidReason!,
-                                style: AppTextStyles.bodyMedium.copyWith(
+                                style: TextStyle(
                                   color: const Color(0xFF5C4000),
-                                  height: 1.6,
-                                  fontSize: 14.sp,
+                                  height: 1.5,
+                                  fontSize: 13.5.sp,
                                 ),
                               ),
                               if (provider.invalidTip != null &&
                                   provider.invalidTip!.isNotEmpty) ...[
-                                12.verticalSpace,
+                                10.verticalSpace,
                                 Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 14.w,
-                                    vertical: 10.h,
+                                    vertical: 8.h,
                                   ),
                                   decoration: BoxDecoration(
                                     color: const Color(
@@ -447,26 +724,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12.r),
                                   ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '💡 ',
-                                        style: TextStyle(fontSize: 14.sp),
-                                      ),
-                                      Expanded(
-                                        child: Text(
-                                          provider.invalidTip!,
-                                          style: AppTextStyles.bodyMedium
-                                              .copyWith(
-                                                color: const Color(0xFF7A5800),
-                                                fontSize: 13.sp,
-                                                height: 1.5,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    'Tip: ${provider.invalidTip!}',
+                                    style: TextStyle(
+                                      color: const Color(0xFF7A5800),
+                                      fontSize: 12.5.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -475,13 +739,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
 
+                      // ── Active Cosmic Roadmap Section ──────────────────────
                       if (provider.actionCards.isNotEmpty) ...[
-                        48.verticalSpace,
+                        32.verticalSpace,
+
+                        // Section Title
                         Row(
                           children: [
                             Container(
                               width: 4.w,
-                              height: 24.h,
+                              height: 22.h,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   begin: Alignment.topCenter,
@@ -492,23 +759,36 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             12.horizontalSpace,
-                            Text(
-                              'Your Cosmic Roadmap',
-                              style: AppTextStyles.headingMedium.copyWith(
-                                color: AppColors.textDark,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 22.sp,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Your Cosmic Roadmap',
+                                    style: TextStyle(
+                                      color: AppColors.textDark,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 20.sp,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Actionable milestones to achieve your vision',
+                                    style: TextStyle(
+                                      color: AppColors.textGrey,
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                        20.verticalSpace,
+                        16.verticalSpace,
+
                         Builder(
                           builder: (context) {
-                            // Built once so the detail screen can be handed
-                            // every step up front — that's what lets it move
-                            // straight from step 1 to step 2 internally
-                            // instead of forcing you back out to this list.
                             final pillars = provider.fullAi?['pillars'];
                             final steps = provider.actionCards
                                 .asMap()
@@ -524,7 +804,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             entry.key <
                                                 (pillars as List).length)
                                         ? pillars[entry.key]['summary']
-                                        : 'Harnessing cosmic intent...',
+                                        : 'Structuring milestone plan...',
                                   },
                                 )
                                 .toList();
@@ -535,10 +815,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .entries
                                   .map(
                                     (entry) => Padding(
-                                      padding: EdgeInsets.only(bottom: 16.h),
+                                      padding: EdgeInsets.only(bottom: 14.h),
                                       child: _ActionCard(
                                         index: entry.key + 1,
                                         title: entry.value['task_title'],
+                                        summary: entry.value['summary'],
                                         steps: steps,
                                         stepIndex: entry.key,
                                         plan: provider.currentPlan!,
@@ -549,9 +830,69 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                         ),
+                      ] else ...[
+                        // ── Modern Insight Banner (When no plan is active) ───
+                        24.verticalSpace,
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(20.r),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(22.r),
+                            border: Border.all(
+                              color: AppColors.borderLight,
+                              width: 1.w,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.lightbulb_rounded,
+                                    color: AppColors.purple,
+                                    size: 18.sp,
+                                  ),
+                                  8.horizontalSpace,
+                                  Text(
+                                    'HOW IT WORKS',
+                                    style: TextStyle(
+                                      color: AppColors.purple,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.3,
+                                      fontSize: 10.5.sp,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              14.verticalSpace,
+                              _ModernStepItem(
+                                step: '01',
+                                title: 'Define with Precision',
+                                subtitle:
+                                    'Articulate your goal clearly. Specificity drives strategic execution.',
+                              ),
+                              12.verticalSpace,
+                              _ModernStepItem(
+                                step: '02',
+                                title: 'AI-Generated Roadmap',
+                                subtitle:
+                                    'Our system decomposes your goal into sequential, actionable pillars.',
+                              ),
+                              12.verticalSpace,
+                              _ModernStepItem(
+                                step: '03',
+                                title: 'Track Daily Milestones',
+                                subtitle:
+                                    'Execute one focused step at a time until your vision materializes.',
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
 
-                      40.verticalSpace,
+                      32.verticalSpace,
                     ],
                   ),
                 ),
@@ -564,9 +905,74 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class _ModernStepItem extends StatelessWidget {
+  final String step;
+  final String title;
+  final String subtitle;
+
+  const _ModernStepItem({
+    required this.step,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28.r,
+          height: 28.r,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(8.r),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            step,
+            style: TextStyle(
+              color: AppColors.purple,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        12.horizontalSpace,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5.sp,
+                  color: AppColors.textDark,
+                ),
+              ),
+              2.verticalSpace,
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: AppColors.textGrey,
+                  fontSize: 12.sp,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ActionCard extends StatelessWidget {
   final int index;
   final String title;
+  final String? summary;
   final Map<String, dynamic> plan;
   final List<Map<String, dynamic>> steps;
   final int stepIndex;
@@ -574,6 +980,7 @@ class _ActionCard extends StatelessWidget {
   const _ActionCard({
     required this.index,
     required this.title,
+    this.summary,
     required this.plan,
     required this.steps,
     required this.stepIndex,
@@ -583,14 +990,7 @@ class _ActionCard extends StatelessWidget {
     Navigator.pushNamed(
       context,
       AppRoutes.actionDetail,
-      arguments: {
-        // The full roadmap, not just this one card — lets the detail
-        // screen move straight from one step to the next itself instead
-        // of forcing you back out to this list every time.
-        'steps': steps,
-        'initialIndex': stepIndex,
-        'plan': plan,
-      },
+      arguments: {'steps': steps, 'initialIndex': stepIndex, 'plan': plan},
     );
   }
 
@@ -598,58 +998,110 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => _showDetail(context),
-      borderRadius: BorderRadius.circular(24.r),
+      borderRadius: BorderRadius.circular(20.r),
       child: Container(
-        padding: EdgeInsets.all(20.r),
+        padding: EdgeInsets.all(16.r),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: AppColors.borderVeryLight),
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: AppColors.borderLight, width: 1.w),
           boxShadow: [
             BoxShadow(
-              color: AppColors.purple.withValues(alpha: 0.05),
-              blurRadius: 10.r,
+              color: AppColors.purple.withValues(alpha: 0.04),
+              blurRadius: 12.r,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
+            // Modern Step Number Indicator
             Container(
-              width: 50.w,
-              height: 50.w,
+              width: 44.w,
+              height: 44.w,
               decoration: BoxDecoration(
-                color: AppColors.purple.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16.r),
+                gradient: const LinearGradient(
+                  colors: AppColors.primaryGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.purple.withValues(alpha: 0.25),
+                    blurRadius: 8.r,
+                    offset: Offset(0, 3.h),
+                  ),
+                ],
               ),
               child: Center(
                 child: Text(
                   '$index',
-                  style: AppTextStyles.headingMedium.copyWith(
-                    color: AppColors.purple,
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16.sp,
                   ),
                 ),
               ),
             ),
-            20.horizontalSpace,
+            14.horizontalSpace,
+            // Title & Preview Summary
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
+                    'PILLAR $index',
+                    style: TextStyle(
+                      color: AppColors.purple,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
                     ),
                   ),
+                  4.verticalSpace,
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textDark,
+                      fontSize: 14.sp,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (summary != null && summary!.isNotEmpty) ...[
+                    4.verticalSpace,
+                    Text(
+                      summary!,
+                      style: TextStyle(
+                        color: AppColors.textGrey,
+                        fontSize: 11.5.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: AppColors.textLightGrey,
-              size: 16,
+            8.horizontalSpace,
+            // Directional Arrow
+            Container(
+              width: 32.r,
+              height: 32.r,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: AppColors.purple,
+                size: 13.sp,
+              ),
             ),
           ],
         ),

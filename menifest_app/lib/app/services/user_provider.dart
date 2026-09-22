@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
@@ -44,6 +45,8 @@ class UserProvider with ChangeNotifier {
     'memo_29',
     'memo_30',
   ];
+
+  static List<String> get memojiList => _memojiList;
 
   static String generateRandomAvatarUrl([String? seed]) {
     final list = List<String>.from(_memojiList)..shuffle();
@@ -241,34 +244,18 @@ class UserProvider with ChangeNotifier {
   }
 
   // ── Default Autofill Answers ───────────────────────────────────────────────
-  static const List<String> defaultPersonalAnswers = [
-    '',
-    '',
-    '',
-    '',
-    '',
-  ];
+  static const List<String> defaultPersonalAnswers = ['', '', '', '', ''];
 
-  static const List<String> defaultFamilyAnswers = [
-    '',
-    '',
-    '',
-    '',
-    '',
-  ];
+  static const List<String> defaultFamilyAnswers = ['', '', '', '', ''];
 
-  static const List<String> defaultProfessionalAnswers = [
-    '',
-    '',
-    '',
-    '',
-    '',
-  ];
+  static const List<String> defaultProfessionalAnswers = ['', '', '', '', ''];
 
   // ── Onboarding Survey Answers ──────────────────────────────────────────────
   final List<String> personalAnswers = List.from(defaultPersonalAnswers);
   final List<String> familyAnswers = List.from(defaultFamilyAnswers);
-  final List<String> professionalAnswers = List.from(defaultProfessionalAnswers);
+  final List<String> professionalAnswers = List.from(
+    defaultProfessionalAnswers,
+  );
 
   // ── Focus & Navigation ────────────────────────────────────────────────
   int? _focusedQuestionIndex;
@@ -311,17 +298,58 @@ class UserProvider with ChangeNotifier {
   Map<String, dynamic>? _archetypeData;
   Map<String, dynamic>? get archetypeData => _archetypeData;
 
-  Future<void> fetchArchetype() async {
+  String _getAnswersHash() {
+    return '${personalAnswers.join('|')}###${familyAnswers.join('|')}###${professionalAnswers.join('|')}';
+  }
+
+  Future<void> fetchArchetype({bool force = false}) async {
     if (_userId == null) return;
+
+    final currentHash = _getAnswersHash();
+
+    // 1. Cache check: only reuse cached archetype if answers haven't changed
+    if (!force) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final savedHash = prefs.getString('cached_archetype_hash_$_userId');
+
+        // Only valid if an existing hash matches the current survey answers exactly
+        final isCacheValid = savedHash != null && savedHash == currentHash;
+
+        if (isCacheValid) {
+          if (_archetypeData != null) {
+            return;
+          }
+          final cached = prefs.getString('cached_archetype_$_userId');
+          if (cached != null && cached.isNotEmpty) {
+            _archetypeData = jsonDecode(cached) as Map<String, dynamic>;
+            notifyListeners();
+            return;
+          }
+        } else {
+          // Answers changed or old cache without hash: clear stale data
+          _archetypeData = null;
+          await prefs.remove('cached_archetype_$_userId');
+          await prefs.remove('cached_archetype_hash_$_userId');
+        }
+      } catch (_) {}
+    }
 
     _isFetchingArchetype = true;
     notifyListeners();
 
     try {
       _archetypeData = await _apiService.generateArchetype(_userId!);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'cached_archetype_$_userId',
+          jsonEncode(_archetypeData),
+        );
+        await prefs.setString('cached_archetype_hash_$_userId', currentHash);
+      } catch (_) {}
     } catch (e) {
       debugPrint('Failed to fetch archetype: $e');
-      _archetypeData = null;
     } finally {
       _isFetchingArchetype = false;
       notifyListeners();
@@ -358,6 +386,14 @@ class UserProvider with ChangeNotifier {
     // reasoning as emailVerified above — this is the offline fallback for
     // that same check.
     _cachedProfileComplete = prefs.getBool('profileComplete') ?? false;
+    if (_userId != null && _userId!.isNotEmpty) {
+      final cachedArch = prefs.getString('cached_archetype_$_userId');
+      if (cachedArch != null && cachedArch.isNotEmpty) {
+        try {
+          _archetypeData = jsonDecode(cachedArch) as Map<String, dynamic>;
+        } catch (_) {}
+      }
+    }
     _biometricLock = prefs.getBool('biometricLockEnabled') ?? false;
     _analyticsEnabled = prefs.getBool('analyticsEnabled') ?? true;
     AnalyticsService.enabled = _analyticsEnabled;
@@ -452,6 +488,7 @@ class UserProvider with ChangeNotifier {
         _showOnboardingErrors = false;
       }
     }
+    _archetypeData = null;
     notifyListeners();
   }
 
@@ -467,7 +504,8 @@ class UserProvider with ChangeNotifier {
     // question pages, i.e. getAnswersFor(step - 1).
     if (step == 0) {
       final emailOk =
-          (_email ?? '').trim().contains('@') && (_email ?? '').trim().contains('.');
+          (_email ?? '').trim().contains('@') &&
+          (_email ?? '').trim().contains('.');
       final passwordOk = (_password ?? '').length >= 6;
       return emailOk && passwordOk;
     }
@@ -499,11 +537,17 @@ class UserProvider with ChangeNotifier {
     debugPrint('SYNCING: userId=$_userId, name=$_name');
 
     try {
-      // Splash-time init() may have raced ahead of onboarding and still be
-      // null (or stale) — refresh right before we actually need to send it.
-      final freshToken = await NotificationService.getToken();
-      if (freshToken != null) {
-        _fcmToken = freshToken;
+      // If we don't already have an FCM token, do a non-blocking fast check
+      if (_fcmToken == null) {
+        try {
+          final freshToken = await NotificationService.getToken().timeout(
+            const Duration(milliseconds: 500),
+            onTimeout: () => null,
+          );
+          if (freshToken != null) {
+            _fcmToken = freshToken;
+          }
+        } catch (_) {}
       }
       debugPrint('SYNCING DATA: email=$_email, fcmToken=$_fcmToken');
       final data = await _apiService.saveUserProfile(
@@ -537,6 +581,14 @@ class UserProvider with ChangeNotifier {
       await prefs.setString('userName', _name);
       await prefs.setString('userImage', _profileImage);
       await prefs.setString('userId', _userId!);
+      // If answers were updated, invalidate cached archetype so it regenerates
+      final currentHash = _getAnswersHash();
+      final savedHash = prefs.getString('cached_archetype_hash_$_userId');
+      if (savedHash != currentHash) {
+        _archetypeData = null;
+        await prefs.remove('cached_archetype_$_userId');
+        await prefs.remove('cached_archetype_hash_$_userId');
+      }
       if (_email != null) {
         await prefs.setString('userEmail', _email!);
       }
@@ -557,7 +609,6 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
 
   /// Copies the personal/family/professional answer arrays out of a raw
   /// profile map (whatever shape login and GET /api/users/:id both return)

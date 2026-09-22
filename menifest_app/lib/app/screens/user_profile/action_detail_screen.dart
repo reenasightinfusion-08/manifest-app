@@ -197,7 +197,8 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
           label: 'GUIDANCE',
           icon: Icons.hourglass_empty_rounded,
           color: AppColors.textGrey,
-          text: 'Guidance for this step is still on its way — try refreshing the plan.',
+          text:
+              'Guidance for this step is still on its way — try refreshing the plan.',
         ),
       ];
     }
@@ -216,9 +217,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
       final isLast = i == paragraphs.length - 1;
       if (isLast && paragraphs.length > 1) {
         // Final section is always the standout action card.
-        cards.add(
-          _TakeawayCard(text: paragraphs[i]),
-        );
+        cards.add(_TakeawayCard(text: paragraphs[i]));
       } else {
         final meta = sectionMeta[i % sectionMeta.length];
         cards.add(
@@ -243,384 +242,401 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
         builder: (context, provider, _) => Stack(
           children: [
             CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            // â”€â”€ Hero Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            SliverAppBar(
-              expandedHeight: 260.h,
-              backgroundColor: AppColors.purple,
-              pinned: true,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              shadowColor: AppColors.transparent,
-              surfaceTintColor: AppColors.transparent,
-              centerTitle: true,
-              // Only fades in once the hero title below has fully scrolled
-              // out of view (see _handleScrollForAppBarTitle) — so the two
-              // titles are never on screen together.
-              title: AnimatedOpacity(
-                opacity: _showAppBarTitle ? 1 : 0,
-                duration: const Duration(milliseconds: 180),
-                child: Text(
-                  _cardData['task_title'] ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.headingSmall.copyWith(
-                    color: AppColors.white,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              leading: Padding(
-                padding: EdgeInsets.all(8.r),
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: AppColors.white,
-                      size: 18,
+              controller: _scrollController,
+              slivers: [
+                // ── Hero Header ──────────────────────────────────────────────
+                SliverAppBar(
+                  expandedHeight: 260.h,
+                  backgroundColor: AppColors.purple,
+                  pinned: true,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  shadowColor: AppColors.transparent,
+                  surfaceTintColor: AppColors.transparent,
+                  centerTitle: true,
+                  // Only fades in once the hero title below has fully scrolled
+                  // out of view (see _handleScrollForAppBarTitle) — so the two
+                  // titles are never on screen together.
+                  title: AnimatedOpacity(
+                    opacity: _showAppBarTitle ? 1 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Text(
+                      _cardData['task_title'] ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.headingSmall.copyWith(
+                        color: AppColors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                ),
-              ),
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: AppColors.primaryGradient,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Ambient circles
-                      Positioned(
-                        top: -40.h,
-                        right: -40.w,
-                        child: Container(
-                          width: 180.r,
-                          height: 180.r,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.white.withValues(alpha: 0.07),
+                  leadingWidth: 56.w,
+                  leading: Center(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 38.r,
+                        height: 38.r,
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.22),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.white.withValues(alpha: 0.35),
+                            width: 1.w,
+                          ),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(right: 2.w),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: AppColors.white,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),
-                      Positioned(
-                        bottom: -30.h,
-                        left: -30.w,
-                        child: Container(
-                          width: 130.r,
-                          height: 130.r,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.white.withValues(alpha: 0.07),
-                          ),
-                        ),
-                      ),
-                      // Content
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 28.w),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(height: 48.h),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 18.w,
-                                vertical: 6.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20.r),
-                                border: Border.all(
-                                  color: AppColors.white.withValues(
-                                    alpha: 0.25,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                'STEP ${_cardData['day_number']}',
-                                style: TextStyle(
-                                  color: AppColors.white,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 2.5,
-                                ),
-                              ),
-                            ),
-                            16.verticalSpace,
-                            Text(
-                              _cardData['task_title'],
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.headingLarge.copyWith(
-                                color: AppColors.white,
-                                fontSize: 26.sp,
-                                fontWeight: FontWeight.w900,
-                                height: 1.25,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 28.h, 20.w, 32.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // â”€â”€ Audio Player Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20.w,
-                        vertical: 20.h,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
                           colors: AppColors.primaryGradient,
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(28.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.purple.withValues(alpha: 0.28),
-                            blurRadius: 24.r,
-                            offset: const Offset(0, 12),
+                      ),
+                      child: Stack(
+                        children: [
+                          // Ambient circles
+                          Positioned(
+                            top: -40.h,
+                            right: -40.w,
+                            child: Container(
+                              width: 180.r,
+                              height: 180.r,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.white.withValues(alpha: 0.07),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -30.h,
+                            left: -30.w,
+                            child: Container(
+                              width: 130.r,
+                              height: 130.r,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.white.withValues(alpha: 0.07),
+                              ),
+                            ),
+                          ),
+                          // Content
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 28.w),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(height: 48.h),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 18.w,
+                                    vertical: 6.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20.r),
+                                    border: Border.all(
+                                      color: AppColors.white.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'STEP ${_cardData['day_number']}',
+                                    style: TextStyle(
+                                      color: AppColors.white,
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 2.5,
+                                    ),
+                                  ),
+                                ),
+                                16.verticalSpace,
+                                Text(
+                                  _cardData['task_title'],
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.headingLarge.copyWith(
+                                    color: AppColors.white,
+                                    fontSize: 26.sp,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      child: Column(
-                        children: [
-                          Row(
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(20.w, 28.h, 20.w, 32.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Audio Player Card ────────────────────────────────────────
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 20.w,
+                            vertical: 20.h,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: AppColors.primaryGradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(28.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.purple.withValues(alpha: 0.28),
+                                blurRadius: 24.r,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: Column(
                             children: [
-                              // Pulsing play button
-                              AnimatedBuilder(
-                                animation: _pulseAnimation,
-                                builder: (_, child) => Transform.scale(
-                                  scale: provider.isPlaying
-                                      ? _pulseAnimation.value
-                                      : 1.0,
-                                  child: child,
-                                ),
-                                child: GestureDetector(
-                                  onTap: () => _toggleAudio(provider),
-                                  child: Container(
-                                    width: 58.r,
-                                    height: 58.r,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.black.withValues(
-                                            alpha: 0.12,
+                              Row(
+                                children: [
+                                  // Pulsing play button
+                                  AnimatedBuilder(
+                                    animation: _pulseAnimation,
+                                    builder: (_, child) => Transform.scale(
+                                      scale: provider.isPlaying
+                                          ? _pulseAnimation.value
+                                          : 1.0,
+                                      child: child,
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () => _toggleAudio(provider),
+                                      child: Container(
+                                        width: 58.r,
+                                        height: 58.r,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.black.withValues(
+                                                alpha: 0.12,
+                                              ),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          provider.isPlaying
+                                              ? Icons.pause_rounded
+                                              : Icons.play_arrow_rounded,
+                                          color: AppColors.purple,
+                                          size: 32.sp,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  16.horizontalSpace,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          provider.isPlaying
+                                              ? '✨ Now Playing'
+                                              : 'Listen to Guidance',
+                                          style: TextStyle(
+                                            color: AppColors.white,
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w800,
                                           ),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
+                                        ),
+                                        4.verticalSpace,
+                                        Text(
+                                          'Tap to ${provider.isPlaying ? 'stop' : 'hear'} this step read aloud',
+                                          style: TextStyle(
+                                            color: AppColors.white.withValues(
+                                              alpha: 0.75,
+                                            ),
+                                            fontSize: 11.sp,
+                                          ),
                                         ),
                                       ],
                                     ),
-                                    child: Icon(
-                                      provider.isPlaying
-                                          ? Icons.pause_rounded
-                                          : Icons.play_arrow_rounded,
-                                      color: AppColors.purple,
-                                      size: 32.sp,
-                                    ),
                                   ),
-                                ),
-                              ),
-                              16.horizontalSpace,
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      provider.isPlaying
-                                          ? 'âœ¦ Now Playing'
-                                          : 'Listen to Guidance',
+                                  // Current speed chip
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10.w,
+                                      vertical: 5.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20.r),
+                                    ),
+                                    child: Text(
+                                      _getSpeedLabel(provider.speechRate),
                                       style: TextStyle(
                                         color: AppColors.white,
-                                        fontSize: 15.sp,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    4.verticalSpace,
-                                    Text(
-                                      'Tap to ${provider.isPlaying ? 'stop' : 'hear'} this step read aloud',
-                                      style: TextStyle(
-                                        color: AppColors.white.withValues(
-                                          alpha: 0.75,
-                                        ),
                                         fontSize: 11.sp,
+                                        fontWeight: FontWeight.w900,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              // Current speed chip
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w,
-                                  vertical: 5.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20.r),
-                                ),
+                              16.verticalSpace,
+                              // Speed controls bar
+                              Row(
+                                children: [
+                                  _SpeedButton(
+                                    label: 'Slower',
+                                    onTap: () => _updateSpeed(provider, -0.15),
+                                  ),
+                                  const Spacer(),
+                                  _SpeedButton(
+                                    label: 'Faster',
+                                    onTap: () => _updateSpeed(provider, 0.15),
+                                    alignRight: true,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        28.verticalSpace,
+
+                        // ── Quick summary strip — the short, at-a-glance take,
+                        // kept small on purpose so it doesn't compete with the
+                        // full guidance below.
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 18.w,
+                            vertical: 14.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.purple.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(16.r),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.bolt_rounded,
+                                color: AppColors.purple,
+                                size: 18.sp,
+                              ),
+                              10.horizontalSpace,
+                              Expanded(
                                 child: Text(
-                                  _getSpeedLabel(provider.speechRate),
-                                  style: TextStyle(
-                                    color: AppColors.white,
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.w900,
+                                  _cardData['summary'] ??
+                                      (widget.plan['summary'] ?? ''),
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.textDark,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.5,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          16.verticalSpace,
-                          // Speed controls bar
-                          Row(
-                            children: [
-                              _SpeedButton(
-                                label: 'Slower',
-                                onTap: () => _updateSpeed(provider, -0.15),
-                              ),
-                              const Spacer(),
-                              _SpeedButton(
-                                label: 'Faster',
-                                onTap: () => _updateSpeed(provider, 0.15),
-                                alignRight: true,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    28.verticalSpace,
-
-                    // ── Quick summary strip — the short, at-a-glance take,
-                    // kept small on purpose so it doesn't compete with the
-                    // full guidance below.
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 18.w,
-                        vertical: 14.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.purple.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.bolt_rounded,
-                            color: AppColors.purple,
-                            size: 18.sp,
-                          ),
-                          10.horizontalSpace,
-                          Expanded(
-                            child: Text(
-                              _cardData['summary'] ??
-                                  (widget.plan['summary'] ?? ''),
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textDark,
-                                fontWeight: FontWeight.w700,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    28.verticalSpace,
-
-                    // ── Section label ────────────────────────────────────
-                    Padding(
-                      padding: EdgeInsets.only(left: 4.w),
-                      child: Text(
-                        'YOUR FULL GUIDANCE',
-                        style: TextStyle(
-                          color: AppColors.purple.withValues(alpha: 0.6),
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
                         ),
-                      ),
-                    ),
-                    12.verticalSpace,
 
-                    // ── Full guidance — several distinct cards (one per
-                    // section, each its own color/icon/label), ending in a
-                    // bold takeaway card. Replaces the single flat white
-                    // box that used to hold everything.
-                    ..._buildGuidanceSections(
-                      _cardData['task_description'] as String?,
-                    ),
+                        28.verticalSpace,
 
-                    28.verticalSpace,
-
-                    // ── Step navigation — move straight to the next/
-                    // previous step without popping back to the roadmap.
-                    // On the final step, "Next Step" becomes "Done", which
-                    // exits back to whichever screen opened this roadmap.
-                    Row(
-                      children: [
-                        if (_hasPrevious)
-                          Expanded(
-                            child: _StepNavButton(
-                              label: 'Previous',
-                              icon: Icons.arrow_back_rounded,
-                              filled: false,
-                              iconLeading: true,
-                              onTap: () => _goToStep(_currentIndex - 1),
+                        // ── Section label ────────────────────────────────────
+                        Padding(
+                          padding: EdgeInsets.only(left: 4.w),
+                          child: Text(
+                            'YOUR FULL GUIDANCE',
+                            style: TextStyle(
+                              color: AppColors.purple.withValues(alpha: 0.6),
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
                             ),
                           ),
-                        if (_hasPrevious) 12.horizontalSpace,
-                        Expanded(
-                          child: _hasNext
-                              ? _StepNavButton(
-                                  label: 'Next Step',
-                                  icon: Icons.arrow_forward_rounded,
-                                  filled: true,
-                                  iconLeading: false,
-                                  onTap: () =>
-                                      _goToNextWithFanfare(_currentIndex + 1),
-                                )
-                              : _StepNavButton(
-                                  label: 'Done',
-                                  icon: Icons.check_rounded,
-                                  filled: true,
-                                  iconLeading: false,
-                                  onTap: () => Navigator.pop(context),
+                        ),
+                        12.verticalSpace,
+
+                        // ── Full guidance — several distinct cards (one per
+                        // section, each its own color/icon/label), ending in a
+                        // bold takeaway card. Replaces the single flat white
+                        // box that used to hold everything.
+                        ..._buildGuidanceSections(
+                          _cardData['task_description'] as String?,
+                        ),
+
+                        28.verticalSpace,
+
+                        // ── Step navigation — move straight to the next/
+                        // previous step without popping back to the roadmap.
+                        // On the final step, "Next Step" becomes "Done", which
+                        // exits back to whichever screen opened this roadmap.
+                        Row(
+                          children: [
+                            if (_hasPrevious)
+                              Expanded(
+                                child: _StepNavButton(
+                                  label: 'Previous',
+                                  icon: Icons.arrow_back_rounded,
+                                  filled: false,
+                                  iconLeading: true,
+                                  onTap: () => _goToStep(_currentIndex - 1),
                                 ),
+                              ),
+                            if (_hasPrevious) 12.horizontalSpace,
+                            Expanded(
+                              child: _hasNext
+                                  ? _StepNavButton(
+                                      label: 'Next Step',
+                                      icon: Icons.arrow_forward_rounded,
+                                      filled: true,
+                                      iconLeading: false,
+                                      onTap: () => _goToNextWithFanfare(
+                                        _currentIndex + 1,
+                                      ),
+                                    )
+                                  : _StepNavButton(
+                                      label: 'Done',
+                                      icon: Icons.check_rounded,
+                                      filled: true,
+                                      iconLeading: false,
+                                      onTap: () => Navigator.pop(context),
+                                    ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
             ),
             if (_isTransitioning)
               Positioned.fill(
@@ -651,7 +667,9 @@ class _StepFanfareOverlay extends StatelessWidget {
           final t = animation.value.clamp(0.0, 1.0);
           // Fade in fast, hold, fade out over the last quarter.
           final fadeIn = (t / 0.2).clamp(0.0, 1.0);
-          final fadeOut = t > 0.75 ? (1 - (t - 0.75) / 0.25).clamp(0.0, 1.0) : 1.0;
+          final fadeOut = t > 0.75
+              ? (1 - (t - 0.75) / 0.25).clamp(0.0, 1.0)
+              : 1.0;
           final opacity = (fadeIn * fadeOut).clamp(0.0, 1.0);
           final bounce = Curves.elasticOut.transform((t / 0.7).clamp(0.0, 1.0));
           final rise = (1 - bounce) * 30;
@@ -709,7 +727,10 @@ class _StepFanfareOverlay extends StatelessWidget {
       offset: Offset(dx * pop, dy * pop),
       child: Opacity(
         opacity: (1 - local).clamp(0.0, 1.0),
-        child: Text('✦', style: TextStyle(fontSize: 16.sp, color: AppColors.purple)),
+        child: Text(
+          '✦',
+          style: TextStyle(fontSize: 16.sp, color: AppColors.purple),
+        ),
       ),
     );
   }

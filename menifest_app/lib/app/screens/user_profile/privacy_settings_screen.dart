@@ -71,18 +71,39 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
         slivers: [
           // ── Header ────────────────────────────────────────────────────
           SliverAppBar(
-            expandedHeight: 180.h,
+            expandedHeight: 210.h,
             backgroundColor: AppColors.white,
             surfaceTintColor: AppColors.white,
             elevation: 0,
             pinned: true,
             stretch: true,
-            leading: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: AppColors.white,
+            leadingWidth: 56.w,
+            leading: Center(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 38.r,
+                  height: 38.r,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.22),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.white.withValues(alpha: 0.35),
+                      width: 1.w,
+                    ),
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 2.w),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: AppColors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              onPressed: () => Navigator.pop(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
@@ -735,8 +756,7 @@ class _ToggleTile extends StatelessWidget {
             activeTrackColor: AppColors.purple,
             inactiveThumbColor: AppColors.white,
             inactiveTrackColor: AppColors.borderLight,
-            trackOutlineColor:
-                const WidgetStatePropertyAll(Colors.transparent),
+            trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
             trackOutlineWidth: const WidgetStatePropertyAll(0.0),
           ),
         ],

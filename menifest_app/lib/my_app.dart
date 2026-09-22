@@ -226,7 +226,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               navigatorKey: _navigatorKey,
               navigatorObservers: [_routeObserver],
               debugShowCheckedModeBanner: false,
-              title: 'Manifest App',
+              title: 'Manifest',
               theme: AppTheme.lightTheme,
               initialRoute: AppRoutes.splash,
               routes: {

@@ -184,7 +184,7 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
       ),
       body: Consumer<ManifestProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoadingHistory) {
+          if (provider.isLoadingHistory && provider.history.isEmpty) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.purple),
             );
@@ -212,151 +212,166 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: EdgeInsets.all(24.r),
-            itemCount: provider.history.length,
-            itemBuilder: (context, index) {
-              final item = provider.history[index];
-              final dateStr = item['created_at'] != null
-                  ? DateTime.parse(
-                      item['created_at'].toString(),
-                    ).toLocal().toString().split(' ')[0]
-                  : 'Unknown date';
+          return RefreshIndicator(
+            color: AppColors.purple,
+            onRefresh: () async {
+              final user = context.read<UserProvider>();
+              if (user.userId != null) {
+                await context.read<ManifestProvider>().loadHistory(
+                  user.userId!,
+                );
+              }
+            },
+            child: ListView.builder(
+              padding: EdgeInsets.all(24.r),
+              itemCount: provider.history.length,
+              itemBuilder: (context, index) {
+                final item = provider.history[index];
+                final dateStr = item['created_at'] != null
+                    ? DateTime.parse(
+                        item['created_at'].toString(),
+                      ).toLocal().toString().split(' ')[0]
+                    : 'Unknown date';
 
-              return Padding(
-                padding: EdgeInsets.only(bottom: 20.h),
-                // ── Swipe RIGHT to reveal delete background ──
-                child: Dismissible(
-                  key: ValueKey(item['id']),
-                  direction: DismissDirection.startToEnd,
-                  confirmDismiss: (_) async {
-                    await _confirmDelete(context, provider, item);
-                    // We handle deletion inside _confirmDelete → never auto-dismiss
-                    return false;
-                  },
-                  background: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(24.r),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.only(left: 24.w),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_forever_rounded,
-                          color: Colors.red,
-                          size: 28.sp,
-                        ),
-                        12.horizontalSpace,
-                        Text(
-                          'Delete',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      provider.restoreHistoricalPlan(item);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Restored manifesto for: ${item['goal_title']} ✨',
-                          ),
-                          backgroundColor: AppColors.purple,
-                        ),
-                      );
-                      Navigator.pop(context);
-                      Navigator.pop(context);
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 20.h),
+                  // ── Swipe RIGHT to reveal delete background ──
+                  child: Dismissible(
+                    key: ValueKey(item['id']),
+                    direction: DismissDirection.startToEnd,
+                    confirmDismiss: (_) async {
+                      await _confirmDelete(context, provider, item);
+                      // We handle deletion inside _confirmDelete → never auto-dismiss
+                      return false;
                     },
-                    borderRadius: BorderRadius.circular(24.r),
-                    child: Container(
-                      padding: EdgeInsets.all(24.r),
+                    background: Container(
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: AppColors.primaryGradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(24.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.purple.withValues(alpha: 0.2),
-                            blurRadius: 15.r,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                        border: Border.all(color: Colors.red.shade200),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.only(left: 24.w),
+                      child: Row(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w,
-                                  vertical: 4.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                child: Text(
-                                  dateStr,
-                                  style: AppTextStyles.label.copyWith(
-                                    color: AppColors.white,
-                                    fontSize: 10.sp,
-                                  ),
-                                ),
-                              ),
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: AppColors.white,
-                                size: 16,
-                              ),
-                            ],
+                          Icon(
+                            Icons.delete_forever_rounded,
+                            color: Colors.red,
+                            size: 28.sp,
                           ),
-                          16.verticalSpace,
+                          12.horizontalSpace,
                           Text(
-                            item['goal_title'] ?? 'My Goal',
-                            style: AppTextStyles.headingMedium.copyWith(
-                              color: AppColors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.w900,
+                            'Delete',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15.sp,
                             ),
                           ),
-                          8.verticalSpace,
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.swipe_right_alt_rounded,
-                                color: AppColors.white.withValues(alpha: 0.6),
-                                size: 14.sp,
-                              ),
-                              6.horizontalSpace,
-                              Text(
-                                'Swipe right to delete  •  Tap to restore',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.white.withValues(alpha: 0.7),
-                                  fontSize: 12.sp,
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
+                    child: InkWell(
+                      onTap: () {
+                        provider.restoreHistoricalPlan(item);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Restored manifesto for: ${item['goal_title']} ✨',
+                            ),
+                            backgroundColor: AppColors.purple,
+                          ),
+                        );
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                      },
+                      borderRadius: BorderRadius.circular(24.r),
+                      child: Container(
+                        padding: EdgeInsets.all(24.r),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: AppColors.primaryGradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.purple.withValues(alpha: 0.2),
+                              blurRadius: 15.r,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 10.w,
+                                    vertical: 4.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  child: Text(
+                                    dateStr,
+                                    style: AppTextStyles.label.copyWith(
+                                      color: AppColors.white,
+                                      fontSize: 10.sp,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: AppColors.white,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                            16.verticalSpace,
+                            Text(
+                              item['goal_title'] ?? 'My Goal',
+                              style: AppTextStyles.headingMedium.copyWith(
+                                color: AppColors.white,
+                                fontSize: 20.sp,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            8.verticalSpace,
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.swipe_right_alt_rounded,
+                                  color: AppColors.white.withValues(alpha: 0.6),
+                                  size: 14.sp,
+                                ),
+                                6.horizontalSpace,
+                                Text(
+                                  'Swipe right to delete  •  Tap to restore',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.white.withValues(
+                                      alpha: 0.7,
+                                    ),
+                                    fontSize: 12.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           );
         },
       ),

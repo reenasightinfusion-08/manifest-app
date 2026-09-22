@@ -20,12 +20,157 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final userProvider = context.read<UserProvider>();
     _nameController = TextEditingController(text: userProvider.name);
+
+    // Precache all 30 memojis in background so selecting/switching is instant (0ms)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (final m in UserProvider.memojiList) {
+        precacheImage(
+          NetworkImage(
+            'https://cdn.jsdelivr.net/gh/alohe/memojis@main/png/$m.png',
+          ),
+          context,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _showAvatarPickerSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+      ),
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.65,
+          padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.borderLight,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+              16.verticalSpace,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CHOOSE YOUR AVATAR',
+                        style: AppTextStyles.label.copyWith(
+                          color: AppColors.textDark,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      4.verticalSpace,
+                      Text(
+                        'Select a cosmic spirit for your journey',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textGrey,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      final randomUrl = UserProvider.generateRandomAvatarUrl();
+                      setState(() => _tempAvatar = randomUrl);
+                      Navigator.pop(ctx);
+                    },
+                    icon: const Icon(
+                      Icons.shuffle_rounded,
+                      size: 16,
+                      color: AppColors.purple,
+                    ),
+                    label: Text(
+                      'Random ✨',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.purple,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.sp,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              16.verticalSpace,
+              Expanded(
+                child: GridView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 14.w,
+                    mainAxisSpacing: 14.h,
+                  ),
+                  itemCount: UserProvider.memojiList.length,
+                  itemBuilder: (context, index) {
+                    final memo = UserProvider.memojiList[index];
+                    final url =
+                        'https://cdn.jsdelivr.net/gh/alohe/memojis@main/png/$memo.png';
+                    final isSelected =
+                        (_tempAvatar ??
+                            context.read<UserProvider>().profileImage) ==
+                        url;
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _tempAvatar = url);
+                        Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(4.r),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isSelected
+                              ? AppColors.purple.withValues(alpha: 0.1)
+                              : AppColors.surfaceVeryLight,
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.purple
+                                : AppColors.borderLight,
+                            width: isSelected ? 2.5 : 1,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.person_rounded,
+                              color: AppColors.purple,
+                              size: 24.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _saveProfile(UserProvider provider) {
@@ -100,40 +245,74 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Column(
               children: [
-                40.verticalSpace,
+                36.verticalSpace,
                 // ── Avatar Edit ──────────────────────────────────────────────
                 Stack(
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(4.r),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: AppColors.primaryGradient,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.purple.withValues(alpha: 0.15),
-                            blurRadius: 30.r,
-                            spreadRadius: 2.r,
+                    GestureDetector(
+                      onTap: () => _showAvatarPickerSheet(context),
+                      child: Container(
+                        width: 140.r,
+                        height: 140.r,
+                        padding: EdgeInsets.all(4.r),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: AppColors.primaryGradient,
                           ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 70.r,
-                        backgroundColor: AppColors.white,
-                        backgroundImage: NetworkImage(currentAvatar),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.purple.withValues(alpha: 0.15),
+                              blurRadius: 30.r,
+                              spreadRadius: 2.r,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Container(
+                            color: AppColors.white,
+                            child: Image.network(
+                              currentAvatar,
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: SizedBox(
+                                        width: 28.r,
+                                        height: 28.r,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: AppColors.purple,
+                                          value:
+                                              loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                              : null,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                    Icons.person_rounded,
+                                    size: 60.r,
+                                    color: AppColors.purple,
+                                  ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _tempAvatar = UserProvider.generateRandomAvatarUrl();
-                          });
-                        },
+                        onTap: () => _showAvatarPickerSheet(context),
                         child: Container(
                           padding: EdgeInsets.all(12.r),
                           decoration: BoxDecoration(
@@ -147,7 +326,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ],
                           ),
                           child: Icon(
-                            Icons.camera_alt_rounded,
+                            Icons.auto_awesome,
                             color: AppColors.white,
                             size: 20.sp,
                           ),

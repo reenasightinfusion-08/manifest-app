@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'analytics_service.dart';
 
@@ -140,12 +141,41 @@ class ManifestProvider with ChangeNotifier {
   int get streakCount => _streakCount;
 
   Future<void> loadHistory(String userId) async {
+    // 1. Instant cache load: if in-memory history is empty, populate from local storage immediately
+    if (_history.isEmpty && _streakCount == 0) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final cachedHistoryStr = prefs.getString('cached_history_$userId');
+        final cachedStreak = prefs.getInt('cached_streak_$userId');
+        if (cachedHistoryStr != null && cachedHistoryStr.isNotEmpty) {
+          _history = jsonDecode(cachedHistoryStr) as List<dynamic>;
+        }
+        if (cachedStreak != null) {
+          _streakCount = cachedStreak;
+        }
+        if (_history.isNotEmpty || _streakCount > 0) {
+          notifyListeners();
+        }
+      } catch (e) {
+        debugPrint('Cache read error: $e');
+      }
+    }
+
     _isLoadingHistory = true;
     notifyListeners();
     try {
       final result = await _apiService.getManifestationHistoryWithStreak(userId);
       _history = result.history;
       _streakCount = result.streak;
+
+      // Persist to local cache for instant future loads
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_history_$userId', jsonEncode(result.history));
+        await prefs.setInt('cached_streak_$userId', result.streak);
+      } catch (e) {
+        debugPrint('Cache write error: $e');
+      }
     } catch (e) {
       debugPrint('History Load Error: $e');
     } finally {
@@ -215,6 +245,10 @@ class ManifestProvider with ChangeNotifier {
         _actionCards = [];
         _fullAi = null;
         _activeGoal = '';
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('cached_history_$userId');
+        } catch (_) {}
         AnalyticsService.logEvent('history_deleted');
         notifyListeners();
       }

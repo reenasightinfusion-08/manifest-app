@@ -28,6 +28,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Consumer2<UserProvider, ManifestProvider>(
       builder: (context, userProvider, manifestProvider, _) {
+        final isLoadingInitial =
+            manifestProvider.isLoadingHistory &&
+            manifestProvider.history.isEmpty;
         final manifestedCount = manifestProvider.history.length.toString();
         final streakCount = manifestProvider.streakCount.toString();
         final goalsCount = manifestProvider.distinctGoalsCount.toString();
@@ -38,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverAppBar(
-                expandedHeight: 340.h,
+                expandedHeight: 350.h,
                 backgroundColor: AppColors.white,
                 surfaceTintColor: AppColors.white,
                 elevation: 0,
@@ -194,6 +197,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                       ),
+                      // ── Upward circular corner sheet (from opposite side) ──
+                      Positioned(
+                        bottom: -1,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 30.h,
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(30.r),
+                              topRight: Radius.circular(30.r),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -205,32 +224,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      30.verticalSpace,
+                      10.verticalSpace,
                       Row(
                         children: [
-                          _StatCard(
+                          _ModernStatCard(
                             label: 'MANIFESTED',
                             value: manifestedCount,
-                            icon: Icons.star_rounded,
-                            color: AppColors.purple,
+                            isLoading: isLoadingInitial,
+                            icon: Icons.auto_awesome_rounded,
+                            accentColor: AppColors.purple,
+                            bgColor: const Color(0xFFF5EEFF),
+                            borderColor: const Color(0xFFE8D8FF),
+                            gradientColors: const [
+                              Color(0xFF7B2FF7),
+                              Color(0xFFE91E8C),
+                            ],
                           ),
-                          16.horizontalSpace,
-                          _StatCard(
+                          12.horizontalSpace,
+                          _ModernStatCard(
                             label: 'STREAK',
                             value: streakCount,
+                            isLoading: isLoadingInitial,
                             icon: Icons.local_fire_department_rounded,
-                            color: AppColors.pink,
+                            accentColor: const Color(0xFFFF5722),
+                            bgColor: const Color(0xFFFFF2EE),
+                            borderColor: const Color(0xFFFFDED4),
+                            gradientColors: const [
+                              Color(0xFFFF5722),
+                              Color(0xFFFF9800),
+                            ],
                           ),
-                          16.horizontalSpace,
-                          _StatCard(
+                          12.horizontalSpace,
+                          _ModernStatCard(
                             label: 'GOALS',
                             value: goalsCount,
-                            icon: Icons.flag_rounded,
-                            color: AppColors.blue,
+                            isLoading: isLoadingInitial,
+                            icon: Icons.track_changes_rounded,
+                            accentColor: AppColors.blue,
+                            bgColor: const Color(0xFFEEF5FF),
+                            borderColor: const Color(0xFFD6E6FF),
+                            gradientColors: const [
+                              Color(0xFF2979FF),
+                              Color(0xFF00E5FF),
+                            ],
                           ),
                         ],
                       ),
-                      40.verticalSpace,
+                      36.verticalSpace,
                       Text(
                         'PERSONAL DIMENSIONS',
                         style: AppTextStyles.label.copyWith(
@@ -293,7 +333,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             TextButton.icon(
                               onPressed: () async {
-                                context.read<ManifestProvider>().resetForLogout();
+                                context
+                                    .read<ManifestProvider>()
+                                    .resetForLogout();
                                 await userProvider.logout();
                                 if (!context.mounted) return;
                                 Navigator.pushNamedAndRemoveUntil(
@@ -339,68 +381,195 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _ModernStatCard extends StatelessWidget {
   final String label;
   final String value;
+  final bool isLoading;
   final IconData icon;
-  final Color color;
+  final Color accentColor;
+  final Color bgColor;
+  final Color borderColor;
+  final List<Color> gradientColors;
 
-  const _StatCard({
+  const _ModernStatCard({
     required this.label,
     required this.value,
+    this.isLoading = false,
     required this.icon,
-    required this.color,
+    required this.accentColor,
+    required this.bgColor,
+    required this.borderColor,
+    this.gradientColors = AppColors.primaryGradient,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 20.h),
+        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: AppColors.borderVeryLight, width: 1.5.w),
+          color: bgColor,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: borderColor, width: 1.2.w),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.06),
-              blurRadius: 12.r,
+              color: accentColor.withValues(alpha: 0.08),
+              blurRadius: 10.r,
               offset: Offset(0, 4.h),
             ),
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.all(8.r),
+              width: 36.r,
+              height: 36.r,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: AppColors.white,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.16),
+                    blurRadius: 6.r,
+                    offset: Offset(0, 2.h),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: color, size: 22.sp),
+              child: Icon(icon, color: accentColor, size: 19.sp),
             ),
-            12.verticalSpace,
-            Text(
-              value,
-              style: AppTextStyles.headingMedium.copyWith(
-                fontSize: 22.sp,
-                color: AppColors.textDark,
-                fontWeight: FontWeight.w900,
+            10.verticalSpace,
+            SizedBox(
+              height: 28.h,
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(
+                        begin: 0.8,
+                        end: 1.0,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: isLoading
+                      ? _StatLoadingDots(
+                          key: const ValueKey('loading_dots'),
+                          gradientColors: gradientColors,
+                        )
+                      : Text(
+                          value,
+                          key: ValueKey<String>(value),
+                          style: TextStyle(
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textDark,
+                            letterSpacing: -0.5,
+                            height: 1.1,
+                          ),
+                        ),
+                ),
               ),
             ),
             4.verticalSpace,
             Text(
               label,
-              style: AppTextStyles.label.copyWith(
-                fontSize: 9.sp,
-                color: AppColors.textGrey,
+              style: TextStyle(
+                fontSize: 9.5.sp,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
+                color: accentColor,
+                letterSpacing: 0.8,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StatLoadingDots extends StatefulWidget {
+  final List<Color> gradientColors;
+
+  const _StatLoadingDots({
+    super.key,
+    this.gradientColors = AppColors.primaryGradient,
+  });
+
+  @override
+  State<_StatLoadingDots> createState() => _StatLoadingDotsState();
+}
+
+class _StatLoadingDotsState extends State<_StatLoadingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (i) {
+            final phase = ((_controller.value - (i * 0.22)) % 1.0);
+            final wave = 1.0 - (phase - 0.5).abs() * 2;
+            final scale = 0.75 + 0.35 * wave;
+            final opacity = (0.35 + 0.65 * wave).clamp(0.2, 1.0);
+
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: 2.5.w),
+              child: Transform.scale(
+                scale: scale,
+                child: Opacity(
+                  opacity: opacity,
+                  child: Container(
+                    width: 6.5.r,
+                    height: 6.5.r,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: widget.gradientColors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.gradientColors.first.withValues(
+                            alpha: 0.35 * opacity,
+                          ),
+                          blurRadius: 4.r,
+                          spreadRadius: 0.5.r,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }
@@ -410,16 +579,12 @@ class _MenuTile extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
-  // Lets one tile's icon run bigger than the shared 20.sp default without
-  // resizing every other tile in the list along with it.
-  final double? iconSize;
 
   const _MenuTile({
     required this.label,
     required this.subtitle,
     required this.icon,
     required this.onTap,
-    this.iconSize,
   });
 
   @override
@@ -454,7 +619,7 @@ class _MenuTile extends StatelessWidget {
                   shaderCallback: (bounds) => const LinearGradient(
                     colors: AppColors.primaryGradient,
                   ).createShader(bounds),
-                  child: Icon(icon, color: AppColors.white, size: iconSize ?? 24.sp),
+                  child: Icon(icon, color: AppColors.white, size: 24.sp),
                 ),
               ),
               20.horizontalSpace,
