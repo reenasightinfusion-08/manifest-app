@@ -60,6 +60,17 @@ class AppTheme {
         contentPadding: const EdgeInsets.all(16),
         hintStyle: const TextStyle(color: AppColors.textLightGrey),
       ),
+      switchTheme: SwitchThemeData(
+        thumbColor: const WidgetStatePropertyAll(AppColors.white),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.purple;
+          }
+          return AppColors.borderLight;
+        }),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+        trackOutlineWidth: const WidgetStatePropertyAll(0.0),
+      ),
     );
   }
 }

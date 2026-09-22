@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/user_provider.dart';
+import '../../widgets/primary_text_field.dart';
+import '../../widgets/solid_button.dart';
 
 class PasscodeVerificationScreen extends StatefulWidget {
   final VoidCallback onAuthenticated;
@@ -109,55 +111,21 @@ class _PasscodeVerificationScreenState
               32.verticalSpace,
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 40.w),
-                child: TextField(
+                child: PrimaryTextField(
                   focusNode: _focusNode,
                   controller: _controller,
                   obscureText: true,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _verify(),
-                  decoration: InputDecoration(
-                    hintText: 'Password',
-                    filled: true,
-                    fillColor: AppColors.surfaceVeryLight,
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16.r),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16.r),
-                      borderSide: BorderSide(
-                        color: provider.securityError
-                            ? AppColors.errorRed
-                            : AppColors.transparent,
-                        width: 1.5.w,
-                      ),
-                    ),
-                  ),
+                  hintText: 'Password',
+                  prefixIcon: Icons.lock_outline_rounded,
+                  hasError: provider.securityError,
                 ),
               ),
               20.verticalSpace,
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 40.w),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _verify,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.purple,
-                      padding: EdgeInsets.symmetric(vertical: 16.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                    ),
-                    child: Text(
-                      'Unlock',
-                      style: AppTextStyles.buttonLarge.copyWith(
-                        color: AppColors.white,
-                      ),
-                    ),
-                  ),
-                ),
+                child: SolidButton(label: 'Unlock', onPressed: _verify),
               ),
               const Spacer(flex: 2),
               Text(

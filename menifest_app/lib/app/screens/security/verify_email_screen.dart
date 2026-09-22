@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/api_service.dart';
 import '../../services/user_provider.dart';
+import '../../widgets/solid_button.dart';
 import '../on_boarding_screen/profile_setup_screen.dart';
 
 /// Shown right after signup (finishesSignup: true, the account already
@@ -247,33 +248,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                               ),
                             ),
                             36.verticalSpace,
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _checking ? null : _checkVerified,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.purple,
-                                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16.r),
-                                  ),
-                                ),
-                                child: _checking
-                                    ? SizedBox(
-                                        width: 20.w,
-                                        height: 20.w,
-                                        child: const CircularProgressIndicator(
-                                          color: AppColors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : Text(
-                                        "I've Verified — Continue",
-                                        style: AppTextStyles.buttonLarge.copyWith(
-                                          color: AppColors.white,
-                                        ),
-                                      ),
-                              ),
+                            SolidButton(
+                              label: "I've Verified — Continue",
+                              onPressed: _checkVerified,
+                              isLoading: _checking,
                             ),
                             16.verticalSpace,
                             TextButton(

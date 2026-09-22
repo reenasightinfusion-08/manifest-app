@@ -735,6 +735,9 @@ class _ToggleTile extends StatelessWidget {
             activeTrackColor: AppColors.purple,
             inactiveThumbColor: AppColors.white,
             inactiveTrackColor: AppColors.borderLight,
+            trackOutlineColor:
+                const WidgetStatePropertyAll(Colors.transparent),
+            trackOutlineWidth: const WidgetStatePropertyAll(0.0),
           ),
         ],
       ),

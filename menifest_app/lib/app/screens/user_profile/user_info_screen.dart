@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/user_provider.dart';
+import '../../widgets/primary_text_field.dart';
 import '../security/verify_email_screen.dart';
 
 /// Account creation only — name, email, password. Deliberately kept to a
@@ -307,32 +308,19 @@ class _UserInfoScreenState extends State<UserInfoScreen>
                                   ),
                                 ),
                                 32.verticalSpace,
-                                TextField(
+                                PrimaryTextField(
                                   controller: _nameController,
                                   focusNode: _nameFocusNode,
                                   textCapitalization: TextCapitalization.words,
                                   textInputAction: TextInputAction.next,
                                   onSubmitted: (_) => _emailFocusNode.requestFocus(),
-                                  decoration: InputDecoration(
-                                    hintText: 'Your Name',
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVeryLight,
-                                    prefixIcon: const Icon(Icons.badge_outlined, size: 20),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      borderSide: BorderSide(
-                                        color: nameError ? AppColors.pink : AppColors.transparent,
-                                        width: 1.5.w,
-                                      ),
-                                    ),
-                                  ),
+                                  hintText: 'Your Name',
+                                  prefixIcon: Icons.badge_outlined,
+                                  hasError: nameError,
+                                  errorColor: AppColors.pink,
                                 ),
                                 16.verticalSpace,
-                                TextField(
+                                PrimaryTextField(
                                   controller: _emailController,
                                   focusNode: _emailFocusNode,
                                   keyboardType: TextInputType.emailAddress,
@@ -343,23 +331,10 @@ class _UserInfoScreenState extends State<UserInfoScreen>
                                       context.read<UserProvider>().setEmail(_emailController.text.trim());
                                     }
                                   },
-                                  decoration: InputDecoration(
-                                    hintText: 'Your Email',
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVeryLight,
-                                    prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      borderSide: BorderSide(
-                                        color: emailError ? AppColors.pink : AppColors.transparent,
-                                        width: 1.5.w,
-                                      ),
-                                    ),
-                                  ),
+                                  hintText: 'Your Email',
+                                  prefixIcon: Icons.alternate_email_rounded,
+                                  hasError: emailError,
+                                  errorColor: AppColors.pink,
                                 ),
                                 if (provider.emailCheckError != null) ...[
                                   8.verticalSpace,
@@ -375,28 +350,15 @@ class _UserInfoScreenState extends State<UserInfoScreen>
                                   ),
                                 ],
                                 16.verticalSpace,
-                                TextField(
+                                PrimaryTextField(
                                   controller: _passwordController,
                                   focusNode: _passwordFocusNode,
                                   obscureText: true,
                                   textInputAction: TextInputAction.done,
-                                  decoration: InputDecoration(
-                                    hintText: 'Password (min. 6 characters)',
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVeryLight,
-                                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      borderSide: BorderSide(
-                                        color: passwordError ? AppColors.pink : AppColors.transparent,
-                                        width: 1.5.w,
-                                      ),
-                                    ),
-                                  ),
+                                  hintText: 'Password (min. 6 characters)',
+                                  prefixIcon: Icons.lock_outline_rounded,
+                                  hasError: passwordError,
+                                  errorColor: AppColors.pink,
                                 ),
                               ],
                             ),

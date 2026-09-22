@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/primary_text_field.dart';
 import '../../services/user_provider.dart';
 import '../../services/api_service.dart' show EmailNotVerifiedException;
 import '../security/verify_email_screen.dart';
@@ -71,34 +72,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               style: AppTextStyles.caption.copyWith(color: AppColors.textGrey),
             ),
             20.verticalSpace,
-            TextField(
+            PrimaryTextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'Your Email...',
-                filled: true,
-                prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
-                fillColor: AppColors.surfaceVeryLight,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.r),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              hintText: 'Your Email...',
+              prefixIcon: Icons.alternate_email_rounded,
             ),
             12.verticalSpace,
-            TextField(
+            PrimaryTextField(
               controller: _passwordController,
               obscureText: true,
-              decoration: InputDecoration(
-                hintText: 'Password',
-                filled: true,
-                prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                fillColor: AppColors.surfaceVeryLight,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.r),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              hintText: 'Password',
+              prefixIcon: Icons.lock_outline,
             ),
           ],
         ),

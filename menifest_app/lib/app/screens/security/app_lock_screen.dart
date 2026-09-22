@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/biometric_service.dart';
 import '../../services/user_provider.dart';
+import '../../widgets/primary_text_field.dart';
+import '../../widgets/solid_button.dart';
 
 /// The cold-start gate every returning, logged-in user passes through.
 /// Everyone who reaches here already has a password from onboarding
@@ -196,54 +198,21 @@ class _AppLockScreenState extends State<AppLockScreen> {
                         ),
                       ),
                       32.verticalSpace,
-                      TextField(
+                      PrimaryTextField(
                         focusNode: _focusNode,
                         controller: _controller,
                         obscureText: true,
                         textInputAction: TextInputAction.done,
                         onSubmitted: (_) => _submitPassword(),
-                        decoration: InputDecoration(
-                          hintText: 'Password',
-                          filled: true,
-                          fillColor: AppColors.white,
-                          prefixIcon: const Icon(
-                            Icons.lock_outline_rounded,
-                            size: 20,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16.r),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16.r),
-                            borderSide: BorderSide(
-                              color: _error
-                                  ? AppColors.errorRed
-                                  : AppColors.transparent,
-                              width: 1.5.w,
-                            ),
-                          ),
-                        ),
+                        hintText: 'Password',
+                        prefixIcon: Icons.lock_outline_rounded,
+                        fillColor: AppColors.white,
+                        hasError: _error,
                       ),
                       20.verticalSpace,
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _submitPassword,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.purple,
-                            padding: EdgeInsets.symmetric(vertical: 16.h),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.r),
-                            ),
-                          ),
-                          child: Text(
-                            'Unlock',
-                            style: AppTextStyles.buttonLarge.copyWith(
-                              color: AppColors.white,
-                            ),
-                          ),
-                        ),
+                      SolidButton(
+                        label: 'Unlock',
+                        onPressed: _submitPassword,
                       ),
                       if (biometricLock && _biometricAvailable) ...[
                         20.verticalSpace,

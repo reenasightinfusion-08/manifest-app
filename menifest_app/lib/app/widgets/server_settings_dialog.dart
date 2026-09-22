@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/common/core.dart';
 import '../services/api_service.dart';
+import 'primary_text_field.dart';
 
 /// Shared "Server Address" dialog — lets the user view/edit/test the
 /// backend URL at runtime (persisted via ApiService), without a rebuild.
@@ -36,16 +37,11 @@ void showServerSettingsDialog(BuildContext context) {
                   ),
                 ),
                 12.verticalSpace,
-                TextField(
+                PrimaryTextField(
                   controller: controller,
                   keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    hintText: 'https://backend-mu-tawny-16.vercel.app',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                    isDense: true,
-                  ),
+                  hintText: 'https://backend-mu-tawny-16.vercel.app',
+                  borderRadius: 10,
                 ),
                 if (resultMessage != null) ...[
                   8.verticalSpace,

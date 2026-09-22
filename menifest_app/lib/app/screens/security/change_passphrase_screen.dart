@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/user_provider.dart';
+import '../../widgets/primary_text_field.dart';
+import '../../widgets/solid_button.dart';
 
 enum _Step { current, create, confirm }
 
@@ -256,35 +258,17 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
                             ),
                           ),
                           32.verticalSpace,
-                          TextField(
+                          PrimaryTextField(
                             focusNode: _focusNode,
                             controller: _controller,
                             enabled: !_saving,
                             obscureText: true,
                             textInputAction: TextInputAction.done,
                             onSubmitted: (_) => _onSubmit(),
-                            decoration: InputDecoration(
-                              hintText: 'Password',
-                              filled: true,
-                              fillColor: AppColors.white,
-                              prefixIcon: const Icon(
-                                Icons.lock_outline_rounded,
-                                size: 20,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16.r),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16.r),
-                                borderSide: BorderSide(
-                                  color: _error
-                                      ? AppColors.errorRed
-                                      : AppColors.transparent,
-                                  width: 1.5.w,
-                                ),
-                              ),
-                            ),
+                            hintText: 'Password',
+                            prefixIcon: Icons.lock_outline_rounded,
+                            fillColor: AppColors.white,
+                            hasError: _error,
                           ),
                           20.verticalSpace,
                           if (_saving)
@@ -299,21 +283,9 @@ class _ChangePassphraseScreenState extends State<ChangePassphraseScreen> {
                           else ...[
                             SizedBox(
                               width: double.infinity,
-                              child: ElevatedButton(
+                              child: SolidButton(
+                                label: 'Continue',
                                 onPressed: _onSubmit,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.purple,
-                                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16.r),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Continue',
-                                  style: AppTextStyles.buttonLarge.copyWith(
-                                    color: AppColors.white,
-                                  ),
-                                ),
                               ),
                             ),
                             20.verticalSpace,
