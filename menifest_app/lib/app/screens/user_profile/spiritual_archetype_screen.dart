@@ -66,11 +66,28 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
         final essenceLabel =
             (data['essence_label'] as String?) ?? 'The Soul Essence';
         final essenceDesc = (data['essence_description'] as String?) ?? '';
+        final patternLabel =
+            (data['pattern_label'] as String?) ?? 'The Pattern We Noticed';
+        final patternText = (data['pattern_text'] as String?) ?? '';
         final strengthsLabel =
-            (data['strengths_label'] as String?) ?? 'Core Strengths';
-        final strengths = List<String>.from(data['strengths'] as List? ?? []);
+            (data['strengths_label'] as String?) ?? 'Your Strengths';
+        final strengthsRaw = List.from(data['strengths'] as List? ?? []);
+        // Supports both the new {title, description} shape and the older
+        // plain-string shape, so cached/older responses still render.
+        final strengths = strengthsRaw.map((s) {
+          if (s is Map) {
+            return _Strength(
+              title: (s['title'] as String?) ?? '',
+              description: (s['description'] as String?) ?? '',
+            );
+          }
+          return _Strength(title: s.toString(), description: '');
+        }).toList();
+        final growthLabel =
+            (data['growth_label'] as String?) ?? 'Your Growth Edge';
+        final growthText = (data['growth_text'] as String?) ?? '';
         final visionLabel =
-            (data['vision_label'] as String?) ?? 'Spiritual Vision';
+            (data['vision_label'] as String?) ?? 'What This Means For You';
         final visionText = (data['vision_text'] as String?) ?? '';
         final buttonLabel =
             (data['button_label'] as String?) ?? 'Continue My Journey';
@@ -80,211 +97,145 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
 
         return Scaffold(
           backgroundColor: AppColors.white,
-          body: CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 250.h,
-                pinned: true,
-                backgroundColor: palette[0],
-                elevation: 0,
-                leading: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: AppColors.white,
+          appBar: AppBar(
+            backgroundColor: AppColors.white,
+            elevation: 0,
+            centerTitle: false,
+            leading: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textDark,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              headerLabel,
+              style: AppTextStyles.label.copyWith(
+                color: AppColors.textGrey,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.refresh_rounded, color: palette[0]),
+                tooltip: 'Regenerate',
+                onPressed: () {
+                  if (userProvider.userId != null) {
+                    userProvider.fetchArchetype();
+                  }
+                },
+              ),
+              8.horizontalSpace,
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 40.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Simple identity header: icon + name, no gradients ──
+                Row(
+                  children: [
+                    Container(
+                      width: 56.r,
+                      height: 56.r,
+                      decoration: BoxDecoration(
+                        color: palette[0].withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: palette[0], size: 28.sp),
+                    ),
+                    16.horizontalSpace,
+                    Expanded(
+                      child: Text(
+                        archetypeName,
+                        style: AppTextStyles.headingLarge.copyWith(
+                          color: AppColors.textDark,
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                28.verticalSpace,
+
+                // Essence section
+                _SectionHeader(title: essenceLabel, icon: Icons.person_rounded),
+                12.verticalSpace,
+                Text(
+                  essenceDesc,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.textDark,
+                    height: 1.6,
                   ),
+                ),
+                28.verticalSpace,
+
+                // Pattern insight — the "what's new here" section, only
+                // shown when the AI actually returned one.
+                if (patternText.isNotEmpty) ...[
+                  _SectionHeader(
+                    title: patternLabel,
+                    icon: Icons.hub_rounded,
+                  ),
+                  12.verticalSpace,
+                  _VisionCard(text: patternText, color: palette[1]),
+                  28.verticalSpace,
+                ],
+
+                // Strengths section
+                _SectionHeader(title: strengthsLabel, icon: Icons.bolt_rounded),
+                12.verticalSpace,
+                Column(
+                  children: strengths
+                      .map(
+                        (s) => Padding(
+                          padding: EdgeInsets.only(bottom: 10.h),
+                          child: _StrengthCard(
+                            strength: s,
+                            color: palette[0],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+                28.verticalSpace,
+
+                // Growth edge section
+                if (growthText.isNotEmpty) ...[
+                  _SectionHeader(
+                    title: growthLabel,
+                    icon: Icons.trending_up_rounded,
+                  ),
+                  12.verticalSpace,
+                  Text(
+                    growthText,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: AppColors.textDark,
+                      height: 1.6,
+                    ),
+                  ),
+                  28.verticalSpace,
+                ],
+
+                // Vision / takeaway section
+                _SectionHeader(
+                  title: visionLabel,
+                  icon: Icons.lightbulb_outline_rounded,
+                ),
+                12.verticalSpace,
+                _VisionCard(text: visionText, color: palette[0]),
+                36.verticalSpace,
+
+                PrimaryButton(
+                  label: buttonLabel,
                   onPressed: () => Navigator.pop(context),
                 ),
-                actions: [
-                  // Refresh button — re-generate archetype on demand
-                  IconButton(
-                    icon: const Icon(
-                      Icons.refresh_rounded,
-                      color: AppColors.white,
-                    ),
-                    tooltip: 'Regenerate',
-                    onPressed: () {
-                      if (userProvider.userId != null) {
-                        userProvider.fetchArchetype();
-                      }
-                    },
-                  ),
-                  10.horizontalSpace,
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Base gradient
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              palette[0].withValues(alpha: 0.85),
-                              palette[1].withValues(alpha: 0.95),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                      ),
-                      // Aura glow top-left
-                      Positioned(
-                        top: -100.h,
-                        left: -100.w,
-                        child: Container(
-                          width: 400.r,
-                          height: 400.r,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                AppColors.white.withValues(alpha: 0.15),
-                                AppColors.white.withValues(alpha: 0),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Aura glow bottom-right
-                      Positioned(
-                        bottom: 0,
-                        right: -150.w,
-                        child: Container(
-                          width: 500.r,
-                          height: 500.r,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                palette[0].withValues(alpha: 0.3),
-                                palette[0].withValues(alpha: 0),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Large icon watermark
-                      Positioned(
-                        bottom: -30.h,
-                        right: -20.w,
-                        child: Icon(
-                          icon,
-                          size: 260.sp,
-                          color: AppColors.white.withValues(alpha: 0.08),
-                        ),
-                      ),
-                      // Text content
-                      Padding(
-                        padding: EdgeInsets.all(24.r),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header label badge
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 14.w,
-                                vertical: 8.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(30.r),
-                                border: Border.all(
-                                  color: AppColors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Text(
-                                headerLabel.toUpperCase(),
-                                style: AppTextStyles.label.copyWith(
-                                  color: AppColors.white,
-                                  letterSpacing: 2.0,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                            16.verticalSpace,
-                            Text(
-                              archetypeName,
-                              style: AppTextStyles.headingLarge.copyWith(
-                                color: AppColors.white,
-                                fontSize: 38.sp,
-                                fontWeight: FontWeight.w900,
-                                height: 1.1,
-                                shadows: [
-                                  Shadow(
-                                    color: AppColors.black.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    offset: const Offset(0, 4),
-                                    blurRadius: 10,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ── Body ────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: EdgeInsets.all(24.r),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Essence section
-                      _SectionHeader(
-                        title: essenceLabel,
-                        icon: Icons.auto_awesome,
-                      ),
-                      16.verticalSpace,
-                      Text(
-                        essenceDesc,
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          color: AppColors.textGrey,
-                          height: 1.6,
-                        ),
-                      ),
-                      32.verticalSpace,
-
-                      // Strengths section
-                      _SectionHeader(title: strengthsLabel, icon: Icons.bolt),
-                      16.verticalSpace,
-                      Wrap(
-                        spacing: 12.w,
-                        runSpacing: 12.h,
-                        children: strengths
-                            .map(
-                              (s) => _StrengthChip(label: s, color: palette[0]),
-                            )
-                            .toList(),
-                      ),
-                      32.verticalSpace,
-
-                      // Vision section
-                      _SectionHeader(
-                        title: visionLabel,
-                        icon: Icons.remove_red_eye,
-                      ),
-                      16.verticalSpace,
-                      _VisionCard(text: visionText, color: palette[0]),
-                      40.verticalSpace,
-
-                      PrimaryButton(
-                        label: buttonLabel,
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      40.verticalSpace,
-                    ],
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -435,14 +386,13 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.purple, size: 24.sp),
-        12.horizontalSpace,
+        Icon(icon, color: AppColors.purple, size: 18.sp),
+        8.horizontalSpace,
         Text(
-          title.toUpperCase(),
-          style: AppTextStyles.label.copyWith(
+          title,
+          style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textDark,
-            letterSpacing: 1.1,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -450,27 +400,67 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _StrengthChip extends StatelessWidget {
-  final String label;
+class _Strength {
+  final String title;
+  final String description;
+
+  const _Strength({required this.title, required this.description});
+}
+
+class _StrengthCard extends StatelessWidget {
+  final _Strength strength;
   final Color color;
 
-  const _StrengthChip({required this.label, required this.color});
+  const _StrengthCard({required this.strength, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      width: double.infinity,
+      padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: color,
-          fontWeight: FontWeight.bold,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8.w,
+                height: 8.w,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              8.horizontalSpace,
+              Expanded(
+                child: Text(
+                  strength.title,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15.sp,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (strength.description.isNotEmpty) ...[
+            8.verticalSpace,
+            Text(
+              strength.description,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textDark,
+                height: 1.4,
+                fontSize: 13.sp,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -485,24 +475,17 @@ class _VisionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(20.r),
+      padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Text(
         text,
         style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textGrey,
-          fontStyle: FontStyle.italic,
+          color: AppColors.textDark,
+          height: 1.5,
         ),
       ),
     );

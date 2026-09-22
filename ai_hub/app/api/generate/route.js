@@ -37,6 +37,12 @@ export async function POST(req) {
           { role: 'user', content: prompt }
         ],
         response_format: format === 'json' ? { type: 'json_object' } : undefined,
+        // Without an explicit cap, the SDK/model default can be small enough
+        // to silently truncate multi-section JSON responses (e.g. a 3-7
+        // pillar manifestation plan), which showed up as suspiciously short,
+        // over-compressed pillar text. Give it real headroom.
+        max_tokens: 8000,
+        temperature: 0.8,
       });
       return NextResponse.json({ 
         success: true, 
@@ -50,7 +56,10 @@ export async function POST(req) {
       const model = genAI.getGenerativeModel({ model: settings.providers.gemini.model });
       
       const fullPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${prompt}` : prompt;
-      const result = await model.generateContent(fullPrompt);
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+        generationConfig: { maxOutputTokens: 8000, temperature: 0.8 },
+      });
       const response = await result.response;
       const text = response.text();
 

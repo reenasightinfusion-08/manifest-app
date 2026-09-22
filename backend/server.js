@@ -1001,39 +1001,51 @@ app.post('/api/generate-plan', async (req, res) => {
       : `Keep guidance general-purpose and applicable to anyone with this goal — do not invent or assume personal details.`;
 
     const prompt = `
-      You are a Master Manifestation Architect and Life Coach.
-      
+      You are a practical, no-nonsense life coach who helps people turn a goal into concrete action.
+
       USER PROFILE:
       ${userProfileBlock}
-      
-      TASK: Generate a hyper-personalized manifestation blueprint for "${goal_title}".
+
+      GOAL TO PLAN FOR (this is the only goal — every pillar must visibly serve THIS goal): "${goal_title}"
+
+      TASK: Generate a hyper-personalized action plan for reaching this exact goal.
 
       First, decide how many PILLARS (NOT day-by-day steps) this SPECIFIC goal genuinely needs to be
       comprehensively covered — do not default to a fixed number. A narrow, single-focus goal
       (e.g. "learn to juggle") may only need 3 pillars; a broad, multi-dimensional goal
       (e.g. "rebuild my entire career and finances") may need up to 7. Never use fewer than 3 or
-      more than 7. Each pillar must be a genuinely distinct angle/dimension of how to manifest this
+      more than 7. Each pillar must be a genuinely distinct angle/dimension of how to reach this
       goal — do not pad the count with overlapping or filler pillars just to hit a number.
 
-      Then, for each pillar, decide its own length based on how much that specific angle actually
-      needs to be covered well — a simple, single-idea pillar might only need ~150 words, while a
-      pillar covering a deep psychological shift or multi-step technique might need 400+ words.
-      Do not pad any pillar with filler just to reach a word count, and do not cut a pillar short
-      if the idea genuinely needs more room. Keep the depth and quality of insight consistent across
-      every pillar even as their length varies.
+      Then, for each pillar, write real substance — every pillar needs a minimum of 200 words, going
+      up to 400+ words when the angle genuinely needs it. Do not write a short, vague paragraph and
+      call it done. Never pad with filler sentences either — every sentence must earn its place.
+
+      RELEVANCE CHECK (do this for every pillar before writing it): could this paragraph be pasted
+      into a plan for a completely different goal without sounding out of place? If yes, rewrite it
+      so it is unmistakably about "${goal_title}" — name the goal, reference concrete details from
+      it, and give steps that only make sense for this goal.
+
+      WRITING RULES (follow strictly):
+      - Use plain, everyday words. No mystical or overly abstract language (avoid words like
+        "cosmic", "universe", "energy", "vibration", "manifesto", "essence", "divine").
+      - Write like a coach talking to the person directly, not like a motivational poster.
+      - Every pillar must include at least 2 concrete, doable actions the person can actually take
+        this week — not just mindset talk.
+      - Reference the user's actual answers and goal directly, by name where relevant.
 
       ${personalizationInstruction}
-      
+
       Return ONLY this JSON structure (the number of objects in "pillars" is however many you
       determined above, between 3 and 7):
       {
-        "plan_title": "A profound, unique 6-8 word title for this blueprint",
-        "overall_summary": "A 3-sentence powerful summary of why this blueprint works for ${user.full_name} specifically",
+        "plan_title": "A clear, specific 6-8 word title naming what this plan is for",
+        "overall_summary": "3 plain sentences on why this plan fits ${user.full_name} specifically and what it will get them.",
         "pillars": [
           {
-            "title": "Emoji + Pillar Name (e.g. 🔥 The Identity Breakthrough)",
-            "huge_text": "A rich, deep-dive manifesto for this specific pillar, as long as this pillar genuinely needs (roughly 150-400+ words). Must reference user's actual answers and goal directly. Include psychological insights, practical techniques, and inspiring language.",
-            "summary": "A 2-sentence crystallized essence of this pillar."
+            "title": "Emoji + Pillar Name (e.g. 🔥 Build The Daily Habit)",
+            "huge_text": "200-400+ words of concrete guidance for this pillar, in plain language, directly tied to \\"${goal_title}\\". Must include at least 2 specific actions the person can take this week. No filler, no jargon. Structure it as 3-4 short paragraphs separated by a blank line (\\n\\n), with the LAST paragraph being one clear, specific action sentence the person should take this week.",
+            "summary": "A 2-sentence plain-language summary of this pillar's core action."
           }
         ]
       }
@@ -1041,7 +1053,10 @@ app.post('/api/generate-plan', async (req, res) => {
 
     // 3. Generate with Groq
     console.log(`🧠 Generating AI manifesto for ${user.full_name}: "${goal_title}"...`);
-    const aiResponse = await generateAI(prompt);
+    const aiResponse = await generateAI(
+      prompt,
+      'You are a practical, plain-speaking life coach. Always return valid JSON matching the exact schema, with real, specific, non-generic content.'
+    );
     console.log(`✨ AI Manifesto Ready!`);
 
     // 4. Save to Supabase
@@ -1151,29 +1166,48 @@ app.post('/api/generate-archetype', async (req, res) => {
 
     // If answers are entirely empty, AI still generates based on name
     const prompt = `
-      You are an insightful spiritual guide and archetype reader.
-      
+      You are a warm, down-to-earth guide who helps people understand their own personality and manifestation style.
+
       USER PROFILE:
       - Name: ${user.full_name}
       - Personal insights: ${(user.personal_answers || []).join(', ')}
       - Family & Connection insights: ${(user.family_answers || []).join(', ')}
       - Professional & Ambition insights: ${(user.professional_answers || []).join(', ')}
-      
-      TASK: Determine the spiritual and manifestation archetype for this user based on their insights. 
-      If insights are empty, create a mysterious, generalized archetype based solely on their vibe and name.
-      
+
+      TASK: Read all three answer groups together and figure out something about this person that
+      isn't obvious from any single answer alone — a pattern that only shows up when you connect
+      their personal, family, and professional answers. This must read as new insight ABOUT them,
+      never a restatement or rephrasing of what they already typed. Use their answers only as
+      evidence to build a bigger picture — do not quote or list them back.
+      If insights are empty, create a general but still concrete archetype based on their name and vibe.
+
+      WRITING RULES (follow strictly):
+      - Use simple, everyday words. No mystical, cosmic, or flowery jargon (avoid words like "cosmic", "universe", "aura", "essence of the soul", "divine", "vibration").
+      - Write like a perceptive friend telling them something they hadn't quite put into words themselves.
+      - Every sentence must say something specific and useful — no filler sentences that just sound nice.
+      - Never just list their answers back to them. Interpret them, connect them, draw a conclusion.
+      - Keep sentences short and clear (under 20 words each).
+
       Return ONLY this precise JSON structure:
       {
-        "archetype_name": "E.g. The Manifesting Mystic",
-        "header_label": "E.g. COSMIC FOOTPRINT",
-        "essence_label": "E.g. The Soul Essence",
-        "essence_description": "A 3-sentence deep description of their spiritual nature based on their answers.",
-        "strengths_label": "E.g. Core Strengths",
-        "strengths": ["Intuition", "Presence", "Alignment"],
-        "vision_label": "E.g. Spiritual Vision",
-        "vision_text": "A poetic 1-2 sentence vision of their destiny.",
+        "archetype_name": "A short, plain-language personality title, e.g. 'The Grounded Achiever'",
+        "header_label": "E.g. YOUR ARCHETYPE",
+        "essence_label": "E.g. Who You Are",
+        "essence_description": "6-8 short, clear sentences (2 short paragraphs) painting a full picture of their personality and how it shows up day to day. Include at least one non-obvious observation, not just a summary of their answers.",
+        "pattern_label": "E.g. The Pattern We Noticed",
+        "pattern_text": "2-3 sentences naming ONE specific connection across their personal, family, and professional answers that they likely haven't noticed themselves. This is the 'what's new here' insight.",
+        "strengths_label": "E.g. Your Strengths",
+        "strengths": [
+          {"title": "Short strength name, e.g. Steady Focus", "description": "One sentence on how this strength actually shows up for them, not a dictionary definition."}
+        ],
+        "growth_label": "E.g. Your Growth Edge",
+        "growth_text": "2-3 honest, kind sentences on one blind spot or habit that may be holding them back. Specific, not generic advice.",
+        "vision_label": "E.g. What This Means For You",
+        "vision_text": "3-4 short, plain sentences on how they can use these strengths and work with their growth edge going forward. Practical and actionable, not poetic.",
         "button_label": "Continue My Journey"
       }
+
+      Include exactly 4 items in "strengths".
     `;
 
     console.log(`🧠 Generating Archetype for ${user.full_name}...`);

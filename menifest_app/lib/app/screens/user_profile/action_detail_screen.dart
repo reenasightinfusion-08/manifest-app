@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
@@ -21,10 +22,14 @@ class ActionDetailScreen extends StatefulWidget {
 }
 
 class _ActionDetailScreenState extends State<ActionDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final FlutterTts _flutterTts = FlutterTts();
+  final ScrollController _scrollController = ScrollController();
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _transitionController;
+  bool _isTransitioning = false;
+  bool _showAppBarTitle = false;
   late int _currentIndex;
 
   Map<String, dynamic> get _cardData => widget.steps[_currentIndex];
@@ -44,11 +49,52 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+    _transitionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    );
+    // Play the same fanfare on first opening this screen too, not just on
+    // "Next Step" — so stepping into the roadmap feels like a little launch
+    // moment from the very first step.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _playFanfare());
+    _scrollController.addListener(_handleScrollForAppBarTitle);
+  }
+
+  // Only reveals the app bar title once the big hero title has fully
+  // scrolled out of view (i.e. the SliverAppBar is fully collapsed) —
+  // otherwise the two titles are visible together during the collapse.
+  void _handleScrollForAppBarTitle() {
+    final collapseDistance = 260.h - kToolbarHeight;
+    final shouldShow = _scrollController.offset >= collapseDistance;
+    if (shouldShow != _showAppBarTitle) {
+      setState(() => _showAppBarTitle = shouldShow);
+    }
+  }
+
+  // Plays the fanfare overlay by itself, without changing the step.
+  Future<void> _playFanfare() async {
+    if (!mounted) return;
+    HapticFeedback.lightImpact();
+    setState(() => _isTransitioning = true);
+    await _transitionController.forward(from: 0);
+    if (!mounted) return;
+    setState(() => _isTransitioning = false);
+    _transitionController.reset();
+  }
+
+  // Plays the fanfare, then swaps to the next step — a little delight
+  // moment so moving forward feels light, not just an instant content swap.
+  Future<void> _goToNextWithFanfare(int newIndex) async {
+    if (newIndex < 0 || newIndex >= widget.steps.length) return;
+    await _playFanfare();
+    await _goToStep(newIndex);
   }
 
   // Moves to the next/previous step in place — no popping back out to the
   // roadmap list and tapping the next card. Stops any playing audio first
-  // since it belongs to whichever step we're leaving.
+  // since it belongs to whichever step we're leaving, and resets the scroll
+  // to the top so the new step always opens from its header, not wherever
+  // the previous step happened to be scrolled to.
   Future<void> _goToStep(int newIndex) async {
     if (newIndex < 0 || newIndex >= widget.steps.length) return;
     final provider = context.read<ManifestProvider>();
@@ -58,6 +104,9 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
     }
     if (!mounted) return;
     setState(() => _currentIndex = newIndex);
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
   }
 
   void _initTts(ManifestProvider provider) {
@@ -87,6 +136,8 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _transitionController.dispose();
+    _scrollController.dispose();
     _flutterTts.stop();
     super.dispose();
   }
@@ -97,12 +148,91 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
       provider.setPlaying(false);
     } else {
       provider.setPlaying(true);
+      final textToRead = (_cardData['task_description'] as String?)?.trim();
       await _flutterTts.speak(
-        _cardData['summary'] ??
-            widget.plan['summary'] ??
-            'Summary loading...',
+        (textToRead != null && textToRead.isNotEmpty)
+            ? textToRead
+            : (_cardData['summary'] ??
+                  widget.plan['summary'] ??
+                  'Content loading...'),
       );
     }
+  }
+
+  // Breaks raw guidance text into paragraph-sized chunks. AI output doesn't
+  // reliably include blank-line breaks, so when there's only one block we
+  // fall back to grouping sentences — otherwise everything renders as one
+  // dense slab no matter how the container around it looks.
+  List<String> _splitIntoParagraphs(String text) {
+    final byBlankLine = text
+        .split(RegExp(r'\n\s*\n'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (byBlankLine.length > 1) return byBlankLine;
+
+    final sentences = text
+        .split(RegExp(r'(?<=[.!?])\s+(?=[A-Z0-9"‘“])'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (sentences.length <= 2) return [text.trim()];
+
+    const perParagraph = 2;
+    final chunks = <String>[];
+    for (var i = 0; i < sentences.length; i += perParagraph) {
+      chunks.add(sentences.skip(i).take(perParagraph).join(' '));
+    }
+    return chunks;
+  }
+
+  // One visually distinct card per section of the guidance — a different
+  // shape from the single flat container this replaces. Each section gets
+  // its own label, icon and accent color so the content reads as several
+  // clearly separated pieces instead of one wall of text.
+  List<Widget> _buildGuidanceSections(String? text) {
+    if (text == null || text.trim().isEmpty) {
+      return [
+        _GuidanceCard(
+          label: 'GUIDANCE',
+          icon: Icons.hourglass_empty_rounded,
+          color: AppColors.textGrey,
+          text: 'Guidance for this step is still on its way — try refreshing the plan.',
+        ),
+      ];
+    }
+
+    final paragraphs = _splitIntoParagraphs(text.trim());
+
+    const sectionMeta = [
+      ('THE BIG PICTURE', Icons.visibility_rounded, AppColors.purple),
+      ('WHY IT MATTERS', Icons.psychology_alt_rounded, AppColors.pink),
+      ('HOW TO DO IT', Icons.checklist_rounded, AppColors.blue),
+      ('KEEP IN MIND', Icons.tips_and_updates_rounded, AppColors.purpleLight),
+    ];
+
+    final cards = <Widget>[];
+    for (var i = 0; i < paragraphs.length; i++) {
+      final isLast = i == paragraphs.length - 1;
+      if (isLast && paragraphs.length > 1) {
+        // Final section is always the standout action card.
+        cards.add(
+          _TakeawayCard(text: paragraphs[i]),
+        );
+      } else {
+        final meta = sectionMeta[i % sectionMeta.length];
+        cards.add(
+          _GuidanceCard(
+            label: meta.$1,
+            icon: meta.$2,
+            color: meta.$3,
+            text: paragraphs[i],
+          ),
+        );
+      }
+      if (!isLast) cards.add(14.verticalSpace);
+    }
+    return cards;
   }
 
   @override
@@ -110,13 +240,38 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5FF),
       body: Consumer<ManifestProvider>(
-        builder: (context, provider, _) => CustomScrollView(
+        builder: (context, provider, _) => Stack(
+          children: [
+            CustomScrollView(
+          controller: _scrollController,
           slivers: [
             // â”€â”€ Hero Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             SliverAppBar(
               expandedHeight: 260.h,
               backgroundColor: AppColors.purple,
               pinned: true,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              shadowColor: AppColors.transparent,
+              surfaceTintColor: AppColors.transparent,
+              centerTitle: true,
+              // Only fades in once the hero title below has fully scrolled
+              // out of view (see _handleScrollForAppBarTitle) — so the two
+              // titles are never on screen together.
+              title: AnimatedOpacity(
+                opacity: _showAppBarTitle ? 1 : 0,
+                duration: const Duration(milliseconds: 180),
+                child: Text(
+                  _cardData['task_title'] ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.headingSmall.copyWith(
+                    color: AppColors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
               leading: Padding(
                 padding: EdgeInsets.all(8.r),
                 child: GestureDetector(
@@ -223,7 +378,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 28.h, 20.w, 100.h),
+                padding: EdgeInsets.fromLTRB(20.w, 28.h, 20.w, 32.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -306,7 +461,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                                     ),
                                     4.verticalSpace,
                                     Text(
-                                      'Tap to ${provider.isPlaying ? 'stop' : 'hear'} your cosmic essence',
+                                      'Tap to ${provider.isPlaying ? 'stop' : 'hear'} this step read aloud',
                                       style: TextStyle(
                                         color: AppColors.white.withValues(
                                           alpha: 0.75,
@@ -360,81 +515,37 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
 
                     28.verticalSpace,
 
-                    // â”€â”€ Section label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                    Padding(
-                      padding: EdgeInsets.only(left: 4.w),
-                      child: Text(
-                        'THE COSMIC ESSENCE',
-                        style: TextStyle(
-                          color: AppColors.purple.withValues(alpha: 0.5),
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ),
-                    12.verticalSpace,
-
-                    // â”€â”€ Summary Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // ── Quick summary strip — the short, at-a-glance take,
+                    // kept small on purpose so it doesn't compete with the
+                    // full guidance below.
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.all(22.r),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(24.r),
-                        border: Border.all(
-                          color: AppColors.pink.withValues(alpha: 0.15),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.purple.withValues(alpha: 0.06),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 18.w,
+                        vertical: 14.h,
                       ),
-                      child: Column(
+                      decoration: BoxDecoration(
+                        color: AppColors.purple.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(7.r),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: AppColors.primaryGradient,
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                ),
-                                child: Icon(
-                                  Icons.auto_awesome,
-                                  color: AppColors.white,
-                                  size: 14.sp,
-                                ),
-                              ),
-                              10.horizontalSpace,
-                              Text(
-                                'Key Insight',
-                                style: AppTextStyles.label.copyWith(
-                                  color: AppColors.purple,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
+                          Icon(
+                            Icons.bolt_rounded,
+                            color: AppColors.purple,
+                            size: 18.sp,
                           ),
-                          16.verticalSpace,
-                          Text(
-                            _cardData['summary'] ??
-                                (widget.plan['summary'] ??
-                                    'Synthesizing cosmic intent...'),
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textDark,
-                              fontWeight: FontWeight.w600,
-                              height: 1.6,
-                              fontSize: 15.sp,
+                          10.horizontalSpace,
+                          Expanded(
+                            child: Text(
+                              _cardData['summary'] ??
+                                  (widget.plan['summary'] ?? ''),
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textDark,
+                                fontWeight: FontWeight.w700,
+                                height: 1.5,
+                              ),
                             ),
                           ),
                         ],
@@ -443,8 +554,35 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
 
                     28.verticalSpace,
 
+                    // ── Section label ────────────────────────────────────
+                    Padding(
+                      padding: EdgeInsets.only(left: 4.w),
+                      child: Text(
+                        'YOUR FULL GUIDANCE',
+                        style: TextStyle(
+                          color: AppColors.purple.withValues(alpha: 0.6),
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                    12.verticalSpace,
+
+                    // ── Full guidance — several distinct cards (one per
+                    // section, each its own color/icon/label), ending in a
+                    // bold takeaway card. Replaces the single flat white
+                    // box that used to hold everything.
+                    ..._buildGuidanceSections(
+                      _cardData['task_description'] as String?,
+                    ),
+
+                    28.verticalSpace,
+
                     // ── Step navigation — move straight to the next/
                     // previous step without popping back to the roadmap.
+                    // On the final step, "Next Step" becomes "Done", which
+                    // exits back to whichever screen opened this roadmap.
                     Row(
                       children: [
                         if (_hasPrevious)
@@ -457,17 +595,25 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                               onTap: () => _goToStep(_currentIndex - 1),
                             ),
                           ),
-                        if (_hasPrevious && _hasNext) 12.horizontalSpace,
-                        if (_hasNext)
-                          Expanded(
-                            child: _StepNavButton(
-                              label: 'Next Step',
-                              icon: Icons.arrow_forward_rounded,
-                              filled: true,
-                              iconLeading: false,
-                              onTap: () => _goToStep(_currentIndex + 1),
-                            ),
-                          ),
+                        if (_hasPrevious) 12.horizontalSpace,
+                        Expanded(
+                          child: _hasNext
+                              ? _StepNavButton(
+                                  label: 'Next Step',
+                                  icon: Icons.arrow_forward_rounded,
+                                  filled: true,
+                                  iconLeading: false,
+                                  onTap: () =>
+                                      _goToNextWithFanfare(_currentIndex + 1),
+                                )
+                              : _StepNavButton(
+                                  label: 'Done',
+                                  icon: Icons.check_rounded,
+                                  filled: true,
+                                  iconLeading: false,
+                                  onTap: () => Navigator.pop(context),
+                                ),
+                        ),
                       ],
                     ),
                   ],
@@ -475,7 +621,95 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
               ),
             ),
           ],
+            ),
+            if (_isTransitioning)
+              Positioned.fill(
+                child: _StepFanfareOverlay(animation: _transitionController),
+              ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+// A short, playful "onward!" overlay shown for a beat while advancing to
+// the next step — a rocket that pops in with a bounce, a couple of trailing
+// sparkles, and a fun label, so moving forward feels like a little reward
+// instead of an instant content swap.
+class _StepFanfareOverlay extends StatelessWidget {
+  final Animation<double> animation;
+
+  const _StepFanfareOverlay({required this.animation});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          final t = animation.value.clamp(0.0, 1.0);
+          // Fade in fast, hold, fade out over the last quarter.
+          final fadeIn = (t / 0.2).clamp(0.0, 1.0);
+          final fadeOut = t > 0.75 ? (1 - (t - 0.75) / 0.25).clamp(0.0, 1.0) : 1.0;
+          final opacity = (fadeIn * fadeOut).clamp(0.0, 1.0);
+          final bounce = Curves.elasticOut.transform((t / 0.7).clamp(0.0, 1.0));
+          final rise = (1 - bounce) * 30;
+
+          // The backdrop itself always stays fully opaque for the whole
+          // animation — only the icon/text inside fade in and out. Fading
+          // the backdrop too (as before) let the step content behind bleed
+          // through during the transition, which looked broken.
+          return Container(
+            color: const Color(0xFFF8F5FF),
+            alignment: Alignment.center,
+            child: Opacity(
+              opacity: opacity,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      _sparkle(-46, -18, t, 0.05),
+                      _sparkle(44, -26, t, 0.15),
+                      _sparkle(-34, 30, t, 0.25),
+                      _sparkle(40, 26, t, 0.1),
+                      Transform.translate(
+                        offset: Offset(0, rise),
+                        child: Transform.scale(
+                          scale: 0.4 + bounce * 0.8,
+                          child: Text('🚀', style: TextStyle(fontSize: 64.sp)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  20.verticalSpace,
+                  Text(
+                    'Onward! ✨',
+                    style: AppTextStyles.headingMedium.copyWith(
+                      color: AppColors.purple,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _sparkle(double dx, double dy, double t, double delay) {
+    final local = ((t - delay) / (1 - delay)).clamp(0.0, 1.0);
+    final pop = Curves.easeOut.transform(local);
+    return Transform.translate(
+      offset: Offset(dx * pop, dy * pop),
+      child: Opacity(
+        opacity: (1 - local).clamp(0.0, 1.0),
+        child: Text('✦', style: TextStyle(fontSize: 16.sp, color: AppColors.purple)),
       ),
     );
   }
@@ -566,6 +800,140 @@ class _StepNavButton extends StatelessWidget {
               ? [iconWidget, 8.horizontalSpace, textWidget]
               : [textWidget, 8.horizontalSpace, iconWidget],
         ),
+      ),
+    );
+  }
+}
+
+// One section of the guidance content: a soft-tinted card with a colored
+// icon chip, an eyebrow label, and the paragraph text. Distinct shape/color
+// per section is what makes the content read as several pieces, not one box.
+class _GuidanceCard extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _GuidanceCard({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(18.r),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border(left: BorderSide(color: color, width: 4)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6.r),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Icon(icon, color: color, size: 14.sp),
+              ),
+              8.horizontalSpace,
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10.5.sp,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          10.verticalSpace,
+          Text(
+            text,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textDark,
+              height: 1.65,
+              fontSize: 15.5.sp,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// The standout final card — the one clear action for this step, in a bold
+// gradient block so it visually anchors the whole section.
+class _TakeawayCard extends StatelessWidget {
+  final String text;
+
+  const _TakeawayCard({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.r),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.purple.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flag_rounded, color: AppColors.white, size: 16.sp),
+              8.horizontalSpace,
+              Text(
+                'TAKE THIS ACTION',
+                style: TextStyle(
+                  color: AppColors.white.withValues(alpha: 0.85),
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          12.verticalSpace,
+          Text(
+            text,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+              height: 1.6,
+              fontSize: 15.5.sp,
+            ),
+          ),
+        ],
       ),
     );
   }
