@@ -310,6 +310,7 @@ class _UserInfoScreenState extends State<UserInfoScreen>
                                 TextField(
                                   controller: _nameController,
                                   focusNode: _nameFocusNode,
+                                  textCapitalization: TextCapitalization.words,
                                   textInputAction: TextInputAction.next,
                                   onSubmitted: (_) => _emailFocusNode.requestFocus(),
                                   decoration: InputDecoration(

@@ -178,8 +178,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // The idle timer is meaningless while backgrounded (no touches can
       // land) — the pause/resume check below takes over instead.
       _idleTimer?.cancel();
-      // Only accounts that actually have a passcode need re-locking.
-      _shouldLockOnResume = user.isLoggedIn && hasPassword;
+      // Only accounts that actually have a passcode and autoLock enabled need re-locking.
+      _shouldLockOnResume = user.isLoggedIn && hasPassword && user.autoLock;
       _pausedAt = _shouldLockOnResume ? DateTime.now() : null;
     } else if (state == AppLifecycleState.resumed) {
       if (_shouldLockOnResume) {

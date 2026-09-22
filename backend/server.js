@@ -11,7 +11,14 @@ const { probeMailbox } = require('./services/mailboxProbeService');
 
 
 const app = express();
+app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
+
+function getBaseUrl(req) {
+  if (process.env.PUBLIC_BACKEND_URL) return process.env.PUBLIC_BACKEND_URL;
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  return `${proto}://${req.get('host')}`;
+}
 
 // Supabase Configuration
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -48,6 +55,20 @@ const restrictToAdmin = (req, res, next) => {
 // Health Check
 app.get('/', (req, res) => {
   res.send('Manifest Cosmic Backend is Live! ✨');
+});
+
+// App Version & Force Update Config
+app.get('/api/app-version', (req, res) => {
+  res.json({
+    success: true,
+    min_version: process.env.MIN_APP_VERSION || '1.0.0',
+    latest_version: process.env.LATEST_APP_VERSION || '1.0.0',
+    force_update: process.env.FORCE_UPDATE_ENABLED === 'true',
+    update_url: process.env.UPDATE_URL_ANDROID || 'https://play.google.com/store/apps/details?id=com.manifest.app',
+    title: process.env.UPDATE_TITLE || 'Update Required',
+    message: process.env.UPDATE_MESSAGE || 'A new version of Manifest is available with critical improvements. Please update to continue.',
+    release_notes: process.env.UPDATE_RELEASE_NOTES || 'Performance enhancements and bug fixes.',
+  });
 });
 
 // ─── Daily Reminder Cron ───────────────────────────────────────────────────
@@ -219,35 +240,18 @@ app.get('/api/check-email', async (req, res) => {
   try {
     const { data: existing, error } = await supabase
       .from('users')
-      .select('id')
+      .select('id, email_verified')
       .ilike('email', email);
     if (error) throw error;
     if (existing && existing.length > 0) {
-      return res.json({ available: false, reason: 'already_exists', message: 'An account with this email already exists.' });
+      const isVerified = existing.some((u) => u.email_verified !== false);
+      if (isVerified) {
+        return res.json({ available: false, reason: 'already_exists', message: 'An account with this email already exists.' });
+      }
     }
 
-    // Self-clean: an expired, never-verified pending signup for this email
-    // shouldn't block a retry — delete it before checking for a live one.
-    await supabase
-      .from('pending_signups')
-      .delete()
-      .ilike('email', email)
-      .is('promoted_to_user_id', null)
-      .lt('verification_expires', new Date().toISOString());
-
-    const { data: pending, error: pendingError } = await supabase
-      .from('pending_signups')
-      .select('id')
-      .ilike('email', email)
-      .is('promoted_to_user_id', null);
-    if (pendingError) throw pendingError;
-    if (pending && pending.length > 0) {
-      return res.json({
-        available: false,
-        reason: 'verification_pending',
-        message: 'A signup with this email is already waiting on email verification. Check your inbox, or wait for it to expire and try again.',
-      });
-    }
+    // Unverified signups in pending_signups do NOT block the user.
+    // Until an email is verified, the user is free to start over or re-register.
   } catch (error) {
     console.error('check-email lookup error:', error.message);
     return res.status(500).json({ available: false, reason: 'server_error', message: 'Could not verify email right now — try again.' });
@@ -311,39 +315,31 @@ app.post('/api/users', async (req, res) => {
     }
 
     if (normalizedEmail) {
-      // Uniqueness check — one account per email.
+      // Uniqueness check — only verified accounts cannot be re-registered.
       const { data: existing, error: emailLookupError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, email_verified')
         .ilike('email', normalizedEmail);
       if (emailLookupError) throw emailLookupError;
-      const takenByAnotherAccount = (existing || []).some((u) => u.id !== id);
+      const takenByAnotherAccount = (existing || []).some((u) => u.id !== id && u.email_verified !== false);
       if (takenByAnotherAccount) {
         return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
       }
 
-      // New signup only (id absent) — also can't collide with someone
-      // else's still-pending, not-yet-verified signup for this email.
+      // New signup (id absent) — clean up any previous unverified pending signup
+      // or unverified account for this email so the user can start fresh.
       if (!id) {
         await supabase
           .from('pending_signups')
           .delete()
           .ilike('email', normalizedEmail)
-          .is('promoted_to_user_id', null)
-          .lt('verification_expires', new Date().toISOString());
-
-        const { data: pendingExisting, error: pendingLookupError } = await supabase
-          .from('pending_signups')
-          .select('id')
-          .ilike('email', normalizedEmail)
           .is('promoted_to_user_id', null);
-        if (pendingLookupError) throw pendingLookupError;
-        if (pendingExisting && pendingExisting.length > 0) {
-          return res.status(409).json({
-            success: false,
-            message: 'A signup with this email is already waiting on email verification.',
-          });
-        }
+
+        await supabase
+          .from('users')
+          .delete()
+          .ilike('email', normalizedEmail)
+          .eq('email_verified', false);
       }
     }
   } catch (error) {
@@ -481,20 +477,17 @@ app.post('/api/users', async (req, res) => {
       // Welcome push happens later still — see the complete_profile branch
       // above, which only ever runs on a real `users` row anyway.
 
-      // Verification email — fire-and-forget, same reasoning as the push
-      // above. baseUrl is derived from the request itself, so this works
-      // whether the backend is reached at a LAN IP in dev or a real domain
-      // in production (override with PUBLIC_BACKEND_URL if needed).
+      // Verification email — must await on serverless (Vercel) so the runtime
+      // does not terminate/freeze before the SMTP connection completes.
       if (result?.email) {
-        const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
-        console.log(`\n📨 [POST /api/users] New signup registered: ${result.email}. Triggering initial verification email...`);
-        sendVerificationEmail(result.email, verificationToken, baseUrl)
-          .then((res) => {
-            console.log(`📨 [POST /api/users] Initial verification email result for ${result.email}:`, res);
-          })
-          .catch((err) => {
-            console.error(`❌ [POST /api/users] Initial verification email error for ${result.email}:`, err.message);
-          });
+        const baseUrl = getBaseUrl(req);
+        console.log(`\n📨 [POST /api/users] New signup registered: ${result.email}. Sending initial verification email...`);
+        try {
+          const sendRes = await sendVerificationEmail(result.email, verificationToken, baseUrl);
+          console.log(`📨 [POST /api/users] Initial verification email result for ${result.email}:`, sendRes);
+        } catch (err) {
+          console.error(`❌ [POST /api/users] Initial verification email error for ${result.email}:`, err.message);
+        }
       }
     }
 
@@ -831,7 +824,7 @@ app.post('/api/resend-verification', async (req, res) => {
         throw updateError;
       }
 
-      const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+      const baseUrl = getBaseUrl(req);
       console.log(`📧 [POST /api/resend-verification] Calling sendVerificationEmail for pending signup ${pending.email}...`);
       const sendResult = await sendVerificationEmail(pending.email, verificationToken, baseUrl);
       console.log(`📬 [POST /api/resend-verification] sendVerificationEmail result:`, sendResult);
@@ -887,7 +880,7 @@ app.post('/api/resend-verification', async (req, res) => {
       throw updateError;
     }
 
-    const baseUrl = process.env.PUBLIC_BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     console.log(`📧 [POST /api/resend-verification] Calling sendVerificationEmail for user ${user.email}...`);
     const sendResult = await sendVerificationEmail(user.email, verificationToken, baseUrl);
     console.log(`📬 [POST /api/resend-verification] sendVerificationEmail result:`, sendResult);
@@ -1361,6 +1354,38 @@ app.delete('/api/history/:userId', async (req, res) => {
       error: error.message,
       code: error.code
     });
+  }
+});
+
+// ─── Fetch Full Profile ─────────────────────────────────────────────────
+// Re-hydrates everything login's response carries (name, avatar, the
+// personal/family/professional answers, etc.) for a session that's already
+// authenticated locally (SharedPreferences userId) rather than logging in
+// again — used when the app cold-starts already logged in, and before
+// opening the "edit your answers" screen, since neither of those goes
+// through POST /api/login.
+app.get('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    delete user.password_hash;
+    delete user.email_verification_token;
+    delete user.email_verification_expires;
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    console.error('Fetch profile error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

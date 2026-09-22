@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/splash_provider.dart';
 import '../../services/user_provider.dart';
+import '../../services/notification_service.dart';
+import '../../services/version_check_service.dart';
+import '../../widgets/update_dialog.dart';
 import '../security/verify_email_screen.dart';
+import '../on_boarding_screen/profile_setup_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,6 +22,9 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
   late Animation<double> _scaleAnimation;
+
+  late Future<AppUpdateInfo> _updateCheckFuture;
+  bool _navigated = false;
 
   @override
   void initState() {
@@ -50,11 +57,89 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
+    // Start version check Future concurrently with splash timer
+    _updateCheckFuture = VersionCheckService.checkAppVersion();
+
     // Start timer in provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SplashProvider>().startSplashTimer();
       context.read<UserProvider>().init();
     });
+  }
+
+  void _handleNavigation(UserProvider user) async {
+    if (_navigated) return;
+    _navigated = true;
+
+    // Await version check to complete (has built-in 5s timeout and fail-open)
+    AppUpdateInfo? updateInfo;
+    try {
+      updateInfo = await _updateCheckFuture;
+    } catch (e) {
+      debugPrint('Version check failed in splash: $e');
+    }
+
+    if (!mounted) return;
+
+    // If force update is required, lock on splash and show non-dismissible dialog
+    if (updateInfo != null && updateInfo.isForceUpdate) {
+      UpdateDialog.show(context, updateInfo);
+      return;
+    }
+
+    // Normal navigation
+    if (user.isLoggedIn) {
+      if (!user.emailVerified) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(
+              userId: user.userId ?? '',
+              email: user.email ?? '',
+              finishesSignup: true,
+            ),
+            settings: const RouteSettings(name: AppRoutes.verifyEmail),
+          ),
+        );
+      } else {
+        // isLoggedIn flips true at ACCOUNT CREATION (UserInfoScreen's
+        // syncToApi call), well before ProfileSetupScreen's personal/
+        // family/professional questions exist to be answered — so it
+        // alone can't tell "finished everything" apart from "closed the
+        // app partway through the profile form". Check the actual
+        // answers (freshly fetched, since a background refresh from
+        // init() may not have landed yet) before deciding — falling back
+        // to the last confirmed state if this device is offline right
+        // now, rather than wrongly treating "couldn't check" as
+        // "incomplete" and bouncing an already-finished user backward.
+        final reached = await user.refreshProfileAnswers();
+        if (!mounted) return;
+        final complete = reached
+            ? user.isProfileComplete
+            : user.cachedProfileComplete;
+        if (complete) {
+          // Fully set up — go straight to Home without demanding a
+          // password every time.
+          Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
+          );
+        }
+      }
+    } else {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+    }
+
+    // If an optional (flexible) update is available, prompt after landing on the next screen
+    // If an optional (flexible) update is available, prompt after landing on the next screen
+    if (updateInfo != null && updateInfo.isFlexibleUpdate) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final navContext = NotificationService.navigatorKey.currentContext;
+        if (navContext != null) {
+          UpdateDialog.show(navContext, updateInfo!);
+        }
+      });
+    }
   }
 
   @override
@@ -69,29 +154,7 @@ class _SplashScreenState extends State<SplashScreen>
       builder: (context, splash, user, _) {
         if (splash.shouldNavigate) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (user.isLoggedIn) {
-              if (!user.emailVerified) {
-                // Signed up (or logged in) but never tapped the emailed
-                // link — keep them here instead of the lock screen.
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => VerifyEmailScreen(
-                      userId: user.userId ?? '',
-                      email: user.email ?? '',
-                      finishesSignup: true,
-                    ),
-                    settings: const RouteSettings(name: AppRoutes.verifyEmail),
-                  ),
-                );
-              } else {
-                // Every logged-in, verified user has a password from
-                // onboarding — gate through the lock screen instead of
-                // going straight in.
-                Navigator.of(context).pushReplacementNamed(AppRoutes.appLock);
-              }
-            } else {
-              Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
-            }
+            _handleNavigation(user);
           });
         }
 

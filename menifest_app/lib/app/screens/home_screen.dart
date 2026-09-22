@@ -302,6 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 provider.setFocused(focus),
                             child: TextField(
                               controller: _dreamController,
+                              textCapitalization: TextCapitalization.sentences,
                               maxLines: 5,
                               textInputAction: TextInputAction.send,
                               onSubmitted: (_) => _submitManifestation(provider),

@@ -189,7 +189,7 @@ class UserProvider with ChangeNotifier {
     );
   }
 
-  bool _autoLock = true;
+  bool _autoLock = false;
   bool get autoLock => _autoLock;
   void setAutoLock(bool value) {
     _autoLock = value;
@@ -285,6 +285,22 @@ class UserProvider with ChangeNotifier {
   bool _isLoggedIn = false;
   bool get isLoggedIn => _isLoggedIn;
 
+  // Cached, persisted mirror of isProfileComplete — the last time it was
+  // actually confirmed against the server. SplashScreen falls back to this
+  // when a fresh check can't reach the network, rather than assuming
+  // "incomplete" just because nothing loaded this cold start (which would
+  // wrongly bounce an already-finished, offline user back into
+  // ProfileSetupScreen).
+  bool _cachedProfileComplete = false;
+  bool get cachedProfileComplete => _cachedProfileComplete;
+
+  Future<void> _setCachedProfileComplete(bool value) async {
+    if (_cachedProfileComplete == value) return;
+    _cachedProfileComplete = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('profileComplete', value);
+  }
+
   String? _userId;
   String? get userId => _userId;
 
@@ -338,13 +354,17 @@ class UserProvider with ChangeNotifier {
     // which sent verified, logged-in users to the verify-email screen
     // after a cold start.
     _emailVerified = prefs.getBool('emailVerified') ?? false;
+    // Same "must be in place before the splash timer's navigation check"
+    // reasoning as emailVerified above — this is the offline fallback for
+    // that same check.
+    _cachedProfileComplete = prefs.getBool('profileComplete') ?? false;
     _biometricLock = prefs.getBool('biometricLockEnabled') ?? false;
     _analyticsEnabled = prefs.getBool('analyticsEnabled') ?? true;
     AnalyticsService.enabled = _analyticsEnabled;
     _personalizationEnabled = prefs.getBool('personalizationEnabled') ?? true;
     _crashReportsEnabled = prefs.getBool('crashReportsEnabled') ?? true;
     CrashReportingService.enabled = _crashReportsEnabled;
-    _autoLock = prefs.getBool('autoLockEnabled') ?? true;
+    _autoLock = prefs.getBool('autoLockEnabled') ?? false;
     _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
     NotificationService.notificationsEnabled = _notificationsEnabled;
     _manifestationTips = prefs.getBool('manifestationTips') ?? true;
@@ -368,6 +388,12 @@ class UserProvider with ChangeNotifier {
         ),
       );
     }
+
+    // A cold start with an already-logged-in session never goes through
+    // loginWithEmail, so personalAnswers/familyAnswers/professionalAnswers
+    // would otherwise sit at their empty defaults for the whole session —
+    // fetch them in the background rather than blocking startup on it.
+    unawaited(refreshProfileAnswers());
 
     // Keep Supabase's fcm_token correct for the rest of this account's
     // lifetime — covers token rotations Firebase triggers on its own,
@@ -449,6 +475,18 @@ class UserProvider with ChangeNotifier {
     return answers.every((a) => a.trim().isNotEmpty);
   }
 
+  /// True once all three ProfileSetupScreen pages are filled in. There's
+  /// no durable "profile complete" flag on the backend — `complete_profile`
+  /// on POST /api/users is a one-shot request flag that only decides
+  /// whether to fire the welcome push, it isn't stored as a column — so
+  /// this is inferred the same way the form itself validates each step.
+  /// Used by SplashScreen to decide whether a logged-in, verified user
+  /// goes to Home or back to ProfileSetupScreen to finish what they
+  /// started (see the comment there for why isLoggedIn alone isn't a
+  /// reliable signal for this).
+  bool get isProfileComplete =>
+      isStepComplete(1) && isStepComplete(2) && isStepComplete(3);
+
   /// [completeProfile] should be true only on the call that finishes
   /// ProfileSetupScreen (personal/family/professional questions all
   /// answered) — it's what tells the backend the account is genuinely
@@ -487,6 +525,14 @@ class UserProvider with ChangeNotifier {
       debugPrint('SYNC SUCCESS: new userId=$_userId');
       AnalyticsService.logEvent('signup_complete', {'userId': _userId});
 
+      // The call that actually finishes ProfileSetupScreen — cache it now
+      // rather than waiting for some later refreshProfileAnswers() to
+      // confirm it, so a quit-and-reopen right after finishing still goes
+      // to Home even if that next cold start happens offline.
+      if (completeProfile) {
+        await _setCachedProfileComplete(true);
+      }
+
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('userName', _name);
       await prefs.setString('userImage', _profileImage);
@@ -513,6 +559,61 @@ class UserProvider with ChangeNotifier {
   }
 
 
+  /// Copies the personal/family/professional answer arrays out of a raw
+  /// profile map (whatever shape login and GET /api/users/:id both return)
+  /// into the in-memory lists the onboarding/edit form reads from.
+  void _restoreAnswersFrom(Map<String, dynamic> profile) {
+    if (profile['personal_answers'] != null) {
+      final List<dynamic> pa = profile['personal_answers'];
+      for (int i = 0; i < pa.length && i < personalAnswers.length; i++) {
+        personalAnswers[i] = pa[i].toString();
+      }
+    }
+    if (profile['family_answers'] != null) {
+      final List<dynamic> fa = profile['family_answers'];
+      for (int i = 0; i < fa.length && i < familyAnswers.length; i++) {
+        familyAnswers[i] = fa[i].toString();
+      }
+    }
+    if (profile['professional_answers'] != null) {
+      final List<dynamic> pra = profile['professional_answers'];
+      for (int i = 0; i < pra.length && i < professionalAnswers.length; i++) {
+        professionalAnswers[i] = pra[i].toString();
+      }
+    }
+  }
+
+  /// Re-fetches this account's saved answers from the backend and merges
+  /// them into personalAnswers/familyAnswers/professionalAnswers.
+  ///
+  /// Those three lists are only ever populated two ways: this call, or
+  /// [loginWithEmail]'s response. A session that reached the logged-in
+  /// state via [init] (cold start with a SharedPreferences userId, the
+  /// common case) never goes through login, so without this the lists sit
+  /// at their empty defaults for the rest of the session even though the
+  /// backend has real data — which is what made the "Edit Your Answers"
+  /// form open blank. Called from init() in the background, again right
+  /// before ProfileSetupScreen opens in edit mode so that screen never
+  /// shows stale/blank data, and by SplashScreen to decide Home vs.
+  /// resuming ProfileSetupScreen.
+  ///
+  /// Returns whether it actually reached the server — false (offline,
+  /// deleted account, …) means the answer lists and [cachedProfileComplete]
+  /// were left untouched, so a caller that needs to fall back to cached
+  /// state can tell the difference from "reached the server and the
+  /// answers are genuinely empty."
+  Future<bool> refreshProfileAnswers() async {
+    if (_userId == null || _userId!.isEmpty) return false;
+    final profile = await _apiService.getUserProfile(_userId!);
+    if (profile == null) return false;
+    _restoreAnswersFrom(profile);
+    await _setCachedProfileComplete(
+      isStepComplete(1) && isStepComplete(2) && isStepComplete(3),
+    );
+    notifyListeners();
+    return true;
+  }
+
   /// Logs in with email + password. The backend verifies the password
   /// against the bcrypt hash and only returns a profile on a match, so
   /// there's nothing left to check client-side here.
@@ -527,25 +628,10 @@ class UserProvider with ChangeNotifier {
         _name = profile['full_name'] ?? _name;
         _profileImage = profile['avatar_url'] ?? _profileImage;
 
-        // Restore answers
-        if (profile['personal_answers'] != null) {
-          final List<dynamic> pa = profile['personal_answers'];
-          for (int i = 0; i < pa.length && i < 5; i++) {
-            personalAnswers[i] = pa[i].toString();
-          }
-        }
-        if (profile['family_answers'] != null) {
-          final List<dynamic> fa = profile['family_answers'];
-          for (int i = 0; i < fa.length && i < 5; i++) {
-            familyAnswers[i] = fa[i].toString();
-          }
-        }
-        if (profile['professional_answers'] != null) {
-          final List<dynamic> pra = profile['professional_answers'];
-          for (int i = 0; i < pra.length && i < 5; i++) {
-            professionalAnswers[i] = pra[i].toString();
-          }
-        }
+        _restoreAnswersFrom(profile);
+        await _setCachedProfileComplete(
+          isStepComplete(1) && isStepComplete(2) && isStepComplete(3),
+        );
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);

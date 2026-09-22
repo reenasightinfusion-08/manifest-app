@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/user_provider.dart';
 import '../../services/manifest_provider.dart';
+import '../on_boarding_screen/profile_setup_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -241,6 +242,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       20.verticalSpace,
                       _MenuTile(
+                        label: 'Edit Your Answers',
+                        subtitle:
+                            'Update what you shared about yourself, family & career',
+                        icon: Icons.quiz_rounded,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const ProfileSetupScreen(isEditing: true),
+                          ),
+                        ),
+                      ),
+                      _MenuTile(
                         label: 'Spiritual Archetype',
                         subtitle: 'Your manifestation DNA and patterns',
                         icon: Icons.psychology_rounded,
@@ -397,12 +410,16 @@ class _MenuTile extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
+  // Lets one tile's icon run bigger than the shared 20.sp default without
+  // resizing every other tile in the list along with it.
+  final double? iconSize;
 
   const _MenuTile({
     required this.label,
     required this.subtitle,
     required this.icon,
     required this.onTap,
+    this.iconSize,
   });
 
   @override
@@ -437,7 +454,7 @@ class _MenuTile extends StatelessWidget {
                   shaderCallback: (bounds) => const LinearGradient(
                     colors: AppColors.primaryGradient,
                   ).createShader(bounds),
-                  child: Icon(icon, color: AppColors.white, size: 20.sp),
+                  child: Icon(icon, color: AppColors.white, size: iconSize ?? 24.sp),
                 ),
               ),
               20.horizontalSpace,

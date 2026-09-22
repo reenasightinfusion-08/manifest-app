@@ -184,6 +184,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       child: TextField(
                         controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
                         style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textDark,
                           fontWeight: FontWeight.w600,

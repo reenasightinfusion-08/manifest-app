@@ -98,6 +98,26 @@ class ApiService {
     }
   }
 
+  /// Fetches the latest published app version and minimum required version
+  /// from the backend. Fails gracefully with null if offline.
+  static Future<Map<String, dynamic>?> getAppVersionInfo() async {
+    try {
+      final response = await _dio.get(
+        '/api/app-version',
+        options: Options(
+          receiveTimeout: const Duration(seconds: 5),
+          sendTimeout: const Duration(seconds: 5),
+        ),
+      );
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data);
+      }
+    } catch (e) {
+      debugPrint('Version check failed (offline or unreachable): $e');
+    }
+    return null;
+  }
+
   Future<Map<String, dynamic>> saveUserProfile({
     String? id,
     required String name,
@@ -149,6 +169,26 @@ class ApiService {
         throw Exception('Network Error: ${e.message}');
       }
       throw Exception('Cosmic Sync Error: $e');
+    }
+  }
+
+  /// Fetches the full profile row (name, avatar, the personal/family/
+  /// professional answers, etc.) for an id that's already authenticated
+  /// locally — used to re-hydrate UserProvider's answer lists on cold
+  /// start and before opening the "edit your answers" screen, neither of
+  /// which goes through POST /api/login. Returns null on any failure
+  /// (offline, deleted account, …) so callers can fail quietly rather than
+  /// blocking on it.
+  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    try {
+      final response = await _dio.get('/api/users/$userId');
+      if (response.statusCode == 200 && response.data['data'] is Map) {
+        return Map<String, dynamic>.from(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] Failed to fetch profile: $e');
+      return null;
     }
   }
 

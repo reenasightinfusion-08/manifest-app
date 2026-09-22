@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
@@ -12,7 +13,13 @@ import '../../services/user_provider.dart';
 /// updates in place once _userId is set), so there's no equivalent
 /// "lose everything" failure mode left on this screen.
 class ProfileSetupScreen extends StatefulWidget {
-  const ProfileSetupScreen({super.key});
+  // False (the default) is the first-time onboarding flow: last step marks
+  // the account complete and lands on Home. True is re-entry from the
+  // profile screen to change already-saved answers: last step just saves
+  // and pops back to wherever it was opened from.
+  final bool isEditing;
+
+  const ProfileSetupScreen({super.key, this.isEditing = false});
 
   @override
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -24,6 +31,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
+  // Edit mode only: what the three answer lists looked like the moment
+  // this screen finished loading them, so "Save Changes" can tell whether
+  // the user actually changed anything before letting them tap it. Null
+  // until that snapshot is taken.
+  List<String>? _initialPersonal;
+  List<String>? _initialFamily;
+  List<String>? _initialProfessional;
+
   @override
   void initState() {
     super.initState();
@@ -34,13 +49,62 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
     _animController.forward();
 
-    // The name was already collected on the account-creation step —
-    // carry it into the first question here instead of asking again.
-    final provider = context.read<UserProvider>();
-    if (provider.personalAnswers[0].trim().isEmpty &&
-        provider.name.isNotEmpty) {
-      provider.updateAnswer(0, 0, provider.name);
+    // Defer to post-frame to avoid setState() / markNeedsBuild() during build.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final provider = context.read<UserProvider>();
+
+      // The PageView always opens on page 0, but a returning-to-edit user
+      // may still have onboardingStep left at 2 from finishing the flow
+      // earlier — without this the step counter/progress bar would read
+      // "Step 3 of 3" while the first page is showing.
+      if (provider.onboardingStep != 0) {
+        provider.setOnboardingStep(0);
+      }
+
+      if (widget.isEditing) {
+        // Don't trust whatever's already in memory — a session that's
+        // been running since before this edit screen existed (or since
+        // before the last save) may still have stale or blank answers.
+        // The form's fields pick this up reactively once it resolves,
+        // via the Consumer this screen is already wrapped in.
+        await provider.refreshProfileAnswers();
+        if (!mounted) return;
+        // Snapshot AFTER the refresh resolves (whether it found fresh
+        // data or, offline, left things as they were) — that's the actual
+        // starting point the user is now editing from.
+        setState(() {
+          _initialPersonal = List<String>.from(provider.personalAnswers);
+          _initialFamily = List<String>.from(provider.familyAnswers);
+          _initialProfessional = List<String>.from(
+            provider.professionalAnswers,
+          );
+        });
+        return;
+      }
+
+      // First-time flow only: the name was already collected on the
+      // account-creation step — carry it into the first question here
+      // instead of asking again.
+      if (provider.personalAnswers.isNotEmpty &&
+          provider.personalAnswers[0].trim().isEmpty &&
+          provider.name.isNotEmpty) {
+        provider.updateAnswer(0, 0, provider.name);
+      }
+    });
+  }
+
+  // False until the initial snapshot is in (nothing to compare against
+  // yet) or while nothing in it differs from the snapshot.
+  bool _hasUnsavedChanges(UserProvider provider) {
+    if (_initialPersonal == null ||
+        _initialFamily == null ||
+        _initialProfessional == null) {
+      return false;
     }
+    return !listEquals(provider.personalAnswers, _initialPersonal) ||
+        !listEquals(provider.familyAnswers, _initialFamily) ||
+        !listEquals(provider.professionalAnswers, _initialProfessional);
   }
 
   @override
@@ -51,15 +115,30 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   }
 
   void _onPageChanged(BuildContext context, int index) {
-    context.read<UserProvider>().setOnboardingStep(index);
+    final provider = context.read<UserProvider>();
+    provider.setOnboardingStep(index);
+    // Question numbering restarts at 1 on every page, but
+    // focusedQuestionIndex is one shared value for the whole flow. Without
+    // this, a text field left focused on the page you're leaving stays
+    // "focused" in the provider, and if the new page happens to have a
+    // question at that same local index, its card wrongly shows a border
+    // it never earned.
+    provider.setFocusedQuestion(null);
     _animController.reset();
     _animController.forward();
   }
 
-  void _goHome(BuildContext context) {
-    Navigator.of(
-      context,
-    ).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
+  // First-time flow: land on Home (clearing the back stack, since there's
+  // nothing behind this screen to return to). Editing: just pop back to
+  // wherever this was opened from (the profile screen).
+  void _finish(BuildContext context) {
+    if (widget.isEditing) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
+    }
   }
 
   void _next(BuildContext context, UserProvider provider) async {
@@ -95,11 +174,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       );
     } else {
       try {
-        // Last step — this is the call that marks the profile complete
-        // and triggers the welcome push (see UserProvider.syncToApi).
-        await provider.syncToApi(completeProfile: true);
+        // completeProfile is only ever true on the call that finishes the
+        // first-time flow — editing later must leave it false (see the
+        // doc comment on UserProvider.syncToApi).
+        await provider.syncToApi(completeProfile: !widget.isEditing);
         if (!context.mounted) return;
-        _goHome(context);
+        _finish(context);
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -132,6 +212,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     return Consumer<UserProvider>(
       builder: (context, provider, _) {
         final bool isLast = provider.onboardingStep == 2;
+        // Only bites on the final "Save Changes" tap in edit mode — the
+        // Continue button on earlier steps always works, since it's just
+        // page navigation, not a save.
+        final bool saveDisabled =
+            widget.isEditing && isLast && !_hasUnsavedChanges(provider);
 
         return Scaffold(
           backgroundColor: AppColors.white,
@@ -214,14 +299,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                           const Spacer(),
                           GestureDetector(
-                            onTap: () => _goHome(context),
+                            onTap: () => _finish(context),
                             child: Padding(
                               padding: EdgeInsets.symmetric(
                                 vertical: 8.h,
                                 horizontal: 4.w,
                               ),
                               child: Text(
-                                'SKIP FOR NOW',
+                                widget.isEditing ? 'CANCEL' : 'SKIP FOR NOW',
                                 style: AppTextStyles.label.copyWith(
                                   color: AppColors.textGrey,
                                   fontWeight: FontWeight.w700,
@@ -312,26 +397,35 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                         MediaQuery.of(context).padding.bottom + 32.h,
                       ),
                       child: GestureDetector(
-                        onTap: () => _next(context, provider),
+                        onTap: saveDisabled
+                            ? null
+                            : () => _next(context, provider),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           width: double.infinity,
                           height: 64.h,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: AppColors.primaryGradient,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            gradient: saveDisabled
+                                ? null
+                                : const LinearGradient(
+                                    colors: AppColors.primaryGradient,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                            color: saveDisabled
+                                ? AppColors.stepDotInactive
+                                : null,
                             borderRadius: BorderRadius.circular(20.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.glowPink,
-                                blurRadius: 20.r,
-                                spreadRadius: -4.r,
-                                offset: Offset(0, 10.h),
-                              ),
-                            ],
+                            boxShadow: saveDisabled
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: AppColors.glowPink,
+                                      blurRadius: 20.r,
+                                      spreadRadius: -4.r,
+                                      offset: Offset(0, 10.h),
+                                    ),
+                                  ],
                           ),
                           child: Center(
                             child: provider.isLoading
@@ -345,10 +439,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                                   )
                                 : Text(
                                     isLast
-                                        ? 'Complete My Profile ✨'
+                                        ? (widget.isEditing
+                                              ? 'Save Changes ✨'
+                                              : 'Complete My Profile ✨')
                                         : 'Continue',
                                     style: AppTextStyles.buttonLarge.copyWith(
                                       fontSize: 16.sp,
+                                      color: saveDisabled
+                                          ? AppColors.textFaded
+                                          : null,
                                     ),
                                   ),
                           ),
@@ -459,7 +558,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
         _Question.text(
           'What do you do for work?',
           Icons.business_center_outlined,
-          'e.g. Software Engineer',
+          'e.g. Teacher, Homemaker, Freelancer',
         ),
         _Question.single(
           'What is your biggest career goal right now?',
@@ -471,6 +570,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
             'Switch careers',
             'Increase income',
             'Improve work-life balance',
+            'Feel more fulfilled in what I do',
             'Other',
           ],
         ),
@@ -504,6 +604,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
             'Financially independent',
             'Industry expert',
             'Work-life balance focus',
+            'Doing work that feels meaningful',
             'Other',
           ],
         ),
@@ -582,6 +683,13 @@ class _QuestionPageState extends State<_QuestionPage> {
   // questions, which don't take keyboard focus). This is what lets hitting
   // "next"/"enter" on the keyboard jump straight into the next textbox.
   late final List<FocusNode?> _focusNodes;
+  // One key per question card so an unanswered dropdown/choice question can
+  // be scrolled into view instead of silently being jumped over.
+  late final List<GlobalKey> _questionKeys;
+  // Index of the choice/dropdown question "next" pointed at after hitting
+  // enter on a textbox — drawn with a gradient border so it's obvious that's
+  // where to go next. Cleared once the user opens it.
+  int? _highlightedIndex;
 
   @override
   void initState() {
@@ -589,6 +697,10 @@ class _QuestionPageState extends State<_QuestionPage> {
     _focusNodes = List.generate(
       widget.page.questions.length,
       (i) => widget.page.questions[i].isChoice ? null : FocusNode(),
+    );
+    _questionKeys = List.generate(
+      widget.page.questions.length,
+      (_) => GlobalKey(),
     );
   }
 
@@ -600,23 +712,64 @@ class _QuestionPageState extends State<_QuestionPage> {
     super.dispose();
   }
 
-  bool _isLastTextQuestion(int index) {
-    for (int i = index + 1; i < widget.page.questions.length; i++) {
-      if (_focusNodes[i] != null) return false;
-    }
-    return true;
+  bool _hasNextTextQuestion(int index) {
+    final nextIndex = index + 1;
+    return nextIndex < widget.page.questions.length &&
+        _focusNodes[nextIndex] != null;
   }
 
+  // Hitting "next"/"enter" moves to the very next question, full stop — it
+  // no longer hunts past an unanswered choice question to reach the next
+  // textbox, which used to make that choice question look skipped/missing.
   void _focusNext(int index) {
-    for (int i = index + 1; i < _focusNodes.length; i++) {
-      final node = _focusNodes[i];
-      if (node != null) {
-        FocusScope.of(context).requestFocus(node);
-        return;
-      }
+    final nextIndex = index + 1;
+    final provider = context.read<UserProvider>();
+    if (nextIndex >= widget.page.questions.length) {
+      FocusScope.of(context).unfocus();
+      provider.setFocusedQuestion(null);
+      setState(() => _highlightedIndex = null);
+      return;
     }
-    // No more textboxes on this page — dismiss the keyboard.
+
+    final nextNode = _focusNodes[nextIndex];
+    if (nextNode != null) {
+      setState(() => _highlightedIndex = null);
+      provider.setFocusedQuestion(nextIndex + 1);
+      FocusScope.of(context).requestFocus(nextNode);
+      final keyContext = _questionKeys[nextIndex].currentContext;
+      if (keyContext != null) {
+        Scrollable.ensureVisible(
+          keyContext,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+          alignment: 0.1,
+        );
+      }
+      return;
+    }
+
+    // Next question is a choice/dropdown one: dismiss the keyboard, clear
+    // any focused textfield border, bring it into view, and give it a
+    // gradient border so it reads as "answer this next" instead of the
+    // page silently advancing past it.
     FocusScope.of(context).unfocus();
+    provider.setFocusedQuestion(null);
+    setState(() => _highlightedIndex = nextIndex);
+    final keyContext = _questionKeys[nextIndex].currentContext;
+    if (keyContext != null) {
+      Scrollable.ensureVisible(
+        keyContext,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+        alignment: 0.1,
+      );
+    }
+  }
+
+  void _clearHighlight(int index) {
+    if (_highlightedIndex == index) {
+      setState(() => _highlightedIndex = null);
+    }
   }
 
   @override
@@ -680,17 +833,25 @@ class _QuestionPageState extends State<_QuestionPage> {
           ...List.generate(widget.page.questions.length, (i) {
             final q = widget.page.questions[i];
             return Padding(
+              key: _questionKeys[i],
               padding: EdgeInsets.only(bottom: 20.h),
               child: _QuestionCard(
                 index: i + 1,
                 question: q,
                 value: widget.answers[i],
                 focusNode: _focusNodes[i],
-                textInputAction: _isLastTextQuestion(i)
-                    ? TextInputAction.done
-                    : TextInputAction.next,
+                textInputAction: _hasNextTextQuestion(i)
+                    ? TextInputAction.next
+                    : TextInputAction.done,
                 onSubmitted: () => _focusNext(i),
                 onChanged: (val) => widget.onChanged(i, val),
+                isHighlighted: i == _highlightedIndex,
+                onHighlightConsumed: () => _clearHighlight(i),
+                onFocusGained: () {
+                  if (_highlightedIndex != null) {
+                    setState(() => _highlightedIndex = null);
+                  }
+                },
               ),
             );
           }),
@@ -709,6 +870,15 @@ class _QuestionCard extends StatefulWidget {
   final TextInputAction textInputAction;
   final VoidCallback onSubmitted;
   final ValueChanged<String> onChanged;
+  // True while this is the choice/dropdown question "next" just pointed at
+  // (via the enter key on the previous textbox) — draws a gradient border.
+  final bool isHighlighted;
+  // Called once the user opens this card so the gradient highlight can be
+  // cleared — it's done its job of pointing them here.
+  final VoidCallback? onHighlightConsumed;
+  // Called when this card's textfield gains focus so any previous choice
+  // highlight on the page is immediately cleared.
+  final VoidCallback? onFocusGained;
 
   const _QuestionCard({
     required this.index,
@@ -718,6 +888,9 @@ class _QuestionCard extends StatefulWidget {
     required this.textInputAction,
     required this.onSubmitted,
     required this.onChanged,
+    this.isHighlighted = false,
+    this.onHighlightConsumed,
+    this.onFocusGained,
   });
 
   @override
@@ -742,6 +915,19 @@ class _QuestionCardState extends State<_QuestionCard> {
     );
     _otherController = TextEditingController(text: _initialOtherText());
     _otherActive = widget.question.isChoice && _computeInitialOtherActive();
+    widget.focusNode?.addListener(_onFocusNodeChanged);
+  }
+
+  void _onFocusNodeChanged() {
+    if (!mounted) return;
+    final hasFocus = widget.focusNode?.hasFocus ?? false;
+    final provider = context.read<UserProvider>();
+    if (hasFocus) {
+      provider.setFocusedQuestion(widget.index);
+      widget.onFocusGained?.call();
+    } else if (provider.focusedQuestionIndex == widget.index) {
+      provider.setFocusedQuestion(null);
+    }
   }
 
   /// If the stored value doesn't match any of the question's known
@@ -782,15 +968,34 @@ class _QuestionCardState extends State<_QuestionCard> {
   @override
   void didUpdateWidget(covariant _QuestionCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.question.isChoice &&
-        oldWidget.value != widget.value &&
-        _controller.text != widget.value) {
-      _controller.text = widget.value;
+    if (oldWidget.focusNode != widget.focusNode) {
+      oldWidget.focusNode?.removeListener(_onFocusNodeChanged);
+      widget.focusNode?.addListener(_onFocusNodeChanged);
     }
+    if (oldWidget.value == widget.value) return;
+
+    if (!widget.question.isChoice) {
+      if (_controller.text != widget.value) {
+        _controller.text = widget.value;
+      }
+      return;
+    }
+
+    // Choice question whose value just arrived/changed from outside this
+    // card — e.g. the edit screen's initial values loading in async, after
+    // this card already mounted with the old (blank) value. Recompute the
+    // "Other" state the same way initState does, so a custom answer shows
+    // as selected instead of the card silently keeping its stale state.
+    final newOtherText = _initialOtherText();
+    setState(() {
+      _otherController.text = newOtherText;
+      _otherActive = _computeInitialOtherActive();
+    });
   }
 
   @override
   void dispose() {
+    widget.focusNode?.removeListener(_onFocusNodeChanged);
     _controller.dispose();
     _otherController.dispose();
     super.dispose();
@@ -819,28 +1024,43 @@ class _QuestionCardState extends State<_QuestionCard> {
         final bool isFocused = provider.focusedQuestionIndex == widget.index;
         final bool isError =
             provider.showOnboardingErrors && widget.value.trim().isEmpty;
+        final bool hasOtherFocus =
+            provider.focusedQuestionIndex != null &&
+            provider.focusedQuestionIndex != widget.index;
+        // The gradient "answer this next" hint only makes sense while no field
+        // is focused (either this one or any other) and this field is neither
+        // in error nor mid-edit.
+        final bool isHighlighted =
+            widget.isHighlighted && !isError && !isFocused && !hasOtherFocus;
 
-        return AnimatedContainer(
+        final cardRadius = 20.r;
+        final card = AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(
-              color: isError
-                  ? AppColors.pink
-                  : isFocused
-                  ? AppColors.pink
-                  : AppColors.borderVeryLight,
-              width: (isFocused || isError) ? 1.5.w : 1.w,
-            ),
+            borderRadius: BorderRadius.circular(cardRadius),
+            border: isHighlighted
+                ? null
+                : Border.all(
+                    color: isError
+                        ? AppColors.errorRed
+                        : isFocused
+                        ? AppColors.pink
+                        : AppColors.borderVeryLight,
+                    width: (isFocused || isError) ? 1.5.w : 1.w,
+                  ),
             boxShadow: [
               BoxShadow(
                 color: isError
-                    ? AppColors.pink.withValues(alpha: 0.1)
+                    ? AppColors.errorRed.withValues(alpha: 0.12)
                     : isFocused
                     ? AppColors.glowPink.withValues(alpha: 0.12)
+                    : isHighlighted
+                    ? AppColors.glowPurple.withValues(alpha: 0.18)
                     : AppColors.black.withValues(alpha: 0.04),
-                blurRadius: (isFocused || isError) ? 16.r : 8.r,
+                blurRadius: (isFocused || isError || isHighlighted)
+                    ? 16.r
+                    : 8.r,
                 spreadRadius: -2.r,
                 offset: Offset(0, 3.h),
               ),
@@ -897,6 +1117,25 @@ class _QuestionCardState extends State<_QuestionCard> {
               ],
             ),
           ),
+        );
+
+        if (!isHighlighted) return card;
+
+        // Flutter's BoxDecoration can't paint a gradient border directly,
+        // so the "answer this next" state is a thin gradient container
+        // with the real card inset inside it.
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.all(1.8.w),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: AppColors.primaryGradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(cardRadius + 1.8),
+          ),
+          child: card,
         );
       },
     );
@@ -1016,6 +1255,7 @@ class _QuestionCardState extends State<_QuestionCard> {
           10.verticalSpace,
           TextField(
             controller: _otherController,
+            textCapitalization: TextCapitalization.sentences,
             onChanged: _onOtherTextChanged,
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textDark,
@@ -1066,7 +1306,9 @@ class _QuestionCardState extends State<_QuestionCard> {
 
   void _openSelectionSheet(BuildContext context) {
     FocusScope.of(context).unfocus();
-    showModalBottomSheet(
+    context.read<UserProvider>().setFocusedQuestion(null);
+    widget.onHighlightConsumed?.call();
+    showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.transparent,
@@ -1085,71 +1327,71 @@ class _QuestionCardState extends State<_QuestionCard> {
           },
         );
       },
-    );
+      // The sheet pops with `true` once an answer was actually confirmed
+      // (a single-choice tap, or "Done"/"Confirm"), not on a bare close —
+      // that's the cue to advance/highlight the next question, same as
+      // hitting enter on a text field.
+    ).then((advanced) {
+      if (advanced == true) widget.onSubmitted();
+    });
   }
 
   Widget _buildTextField() {
-    return Focus(
-      onFocusChange: (f) {
-        final provider = context.read<UserProvider>();
-        if (f) {
-          provider.setFocusedQuestion(widget.index);
-        } else if (provider.focusedQuestionIndex == widget.index) {
-          provider.setFocusedQuestion(null);
-        }
+    return Actions(
+      actions: {
+        NextFocusIntent: CallbackAction<NextFocusIntent>(
+          onInvoke: (intent) {
+            widget.onSubmitted();
+            return null;
+          },
+        ),
       },
       child: TextField(
         controller: _controller,
         focusNode: widget.focusNode,
+        textCapitalization: TextCapitalization.sentences,
         onChanged: widget.onChanged,
         maxLines: widget.question.isMultiLine ? 3 : 1,
         minLines: 1,
-        textInputAction: widget.question.isMultiLine
-            ? TextInputAction.newline
-            : widget.textInputAction,
-        // Enter/return on the keyboard moves straight into the next
-        // textbox on this page (or dismisses the keyboard after the last
-        // one) instead of just adding a newline or doing nothing.
-        onSubmitted: widget.question.isMultiLine
-            ? null
-            : (_) => widget.onSubmitted(),
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textDark,
+        textInputAction: widget.textInputAction,
+        // Enter/return on the keyboard always moves straight into the next
+        // question (or dismisses the keyboard if the next is a choice question),
+        // preventing Flutter from skipping non-text questions.
+        onSubmitted: (_) => widget.onSubmitted(),
+      style: AppTextStyles.bodyMedium.copyWith(
+        color: AppColors.textDark,
+        fontSize: 14.sp,
+      ),
+      decoration: InputDecoration(
+        hintText: widget.question.hint,
+        hintStyle: AppTextStyles.hint.copyWith(
+          color: AppColors.textLightGrey,
           fontSize: 14.sp,
         ),
-        decoration: InputDecoration(
-          hintText: widget.question.hint,
-          hintStyle: AppTextStyles.hint.copyWith(
-            color: AppColors.textLightGrey,
-            fontSize: 14.sp,
-          ),
-          prefixIcon: Icon(
-            widget.question.icon,
-            color: AppColors.purple.withValues(alpha: 0.5),
-            size: 18.sp,
-          ),
-          filled: true,
-          fillColor: AppColors.surfaceLight,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 16.w,
-            vertical: 12.h,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide.none,
-          ),
+        prefixIcon: Icon(
+          widget.question.icon,
+          color: AppColors.purple.withValues(alpha: 0.5),
+          size: 18.sp,
+        ),
+        filled: true,
+        fillColor: AppColors.surfaceLight,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide.none,
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _DropdownSelectionSheet extends StatefulWidget {
@@ -1225,7 +1467,7 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
         _otherController.clear();
       });
       widget.onSelectionChanged(option, false, '');
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -1486,6 +1728,8 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                 12.verticalSpace,
                                 TextField(
                                   controller: _otherController,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
                                   autofocus: true,
                                   onChanged: _onOtherTextChanged,
                                   style: AppTextStyles.bodyMedium.copyWith(
@@ -1543,7 +1787,7 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
               Padding(
                 padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
                 child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
+                  onTap: () => Navigator.of(context).pop(true),
                   child: Container(
                     width: double.infinity,
                     height: 52.h,
