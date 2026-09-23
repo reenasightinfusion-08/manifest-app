@@ -77,28 +77,31 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
             elevation: 0,
             pinned: true,
             stretch: true,
-            leadingWidth: 56.w,
-            leading: Center(
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: 38.r,
-                  height: 38.r,
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.22),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.white.withValues(alpha: 0.35),
-                      width: 1.w,
+            leadingWidth: 68.w,
+            leading: Padding(
+              padding: EdgeInsets.only(left: 18.w),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 38.r,
+                    height: 38.r,
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withValues(alpha: 0.22),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.white.withValues(alpha: 0.35),
+                        width: 1.w,
+                      ),
                     ),
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(right: 2.w),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.white,
-                        size: 16,
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 2.w),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: AppColors.white,
+                          size: 16,
+                        ),
                       ),
                     ),
                   ),

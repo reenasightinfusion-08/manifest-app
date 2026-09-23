@@ -427,6 +427,18 @@ class ApiService {
     }
   }
 
+  Future<bool> markManifested(String manifestationId) async {
+    try {
+      final response = await _dio.post(
+        '/api/manifestations/$manifestationId/manifested',
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      debugPrint('Failed to mark manifestation as manifested: $e');
+      return false;
+    }
+  }
+
   Future<bool> deleteManifest(String manifestationId) async {
     try {
       final response = await _dio.delete(

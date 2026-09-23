@@ -58,6 +58,15 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
     // moment from the very first step.
     WidgetsBinding.instance.addPostFrameCallback((_) => _playFanfare());
     _scrollController.addListener(_handleScrollForAppBarTitle);
+    _markCurrentStepRead();
+  }
+
+  void _markCurrentStepRead() {
+    context.read<ManifestProvider>().markStepRead(
+      widget.plan['manifestation_id']?.toString(),
+      _currentIndex,
+      widget.steps.length,
+    );
   }
 
   // Only reveals the app bar title once the big hero title has fully
@@ -104,6 +113,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
     }
     if (!mounted) return;
     setState(() => _currentIndex = newIndex);
+    _markCurrentStepRead();
     if (_scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }

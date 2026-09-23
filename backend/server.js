@@ -1300,6 +1300,24 @@ app.get('/api/history/:userId', async (req, res) => {
   }
 });
 
+// ─── Mark Manifestation as Fully Read ─────────────────────────────────────
+// Called once the user has opened every step of a plan — this is what the
+// profile's MANIFESTED count is built from.
+app.post('/api/manifestations/:id/manifested', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { error } = await supabase
+      .from('manifestations')
+      .update({ is_manifested: true })
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[MANIFESTED ERROR]:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ─── Delete Manifestation (Permanent) ────────────────────────────────────────
 app.delete('/api/manifestations/:id', async (req, res) => {
   const { id } = req.params;

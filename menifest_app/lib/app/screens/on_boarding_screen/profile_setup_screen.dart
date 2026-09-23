@@ -400,56 +400,52 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                         onTap: saveDisabled
                             ? null
                             : () => _next(context, provider),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          width: double.infinity,
-                          height: 64.h,
-                          decoration: BoxDecoration(
-                            gradient: saveDisabled
-                                ? null
-                                : const LinearGradient(
-                                    colors: AppColors.primaryGradient,
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                            color: saveDisabled
-                                ? AppColors.stepDotInactive
-                                : null,
-                            borderRadius: BorderRadius.circular(20.r),
-                            boxShadow: saveDisabled
-                                ? []
-                                : [
-                                    BoxShadow(
-                                      color: AppColors.glowPink,
-                                      blurRadius: 20.r,
-                                      spreadRadius: -4.r,
-                                      offset: Offset(0, 10.h),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: saveDisabled ? 0.45 : 1.0,
+                          child: Container(
+                            width: double.infinity,
+                            height: 64.h,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: AppColors.primaryGradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20.r),
+                              boxShadow: saveDisabled
+                                  ? const []
+                                  : [
+                                      BoxShadow(
+                                        color: AppColors.glowPink,
+                                        blurRadius: 20.r,
+                                        spreadRadius: -4.r,
+                                        offset: Offset(0, 10.h),
+                                      ),
+                                    ],
+                            ),
+                            child: Center(
+                              child: provider.isLoading
+                                  ? SizedBox(
+                                      width: 24.w,
+                                      height: 24.w,
+                                      child: const CircularProgressIndicator(
+                                        color: AppColors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      isLast
+                                          ? (widget.isEditing
+                                                ? 'Save Changes ✨'
+                                                : 'Complete My Profile ✨')
+                                          : 'Continue',
+                                      style: AppTextStyles.buttonLarge.copyWith(
+                                        fontSize: 16.sp,
+                                        color: AppColors.white,
+                                      ),
                                     ),
-                                  ],
-                          ),
-                          child: Center(
-                            child: provider.isLoading
-                                ? SizedBox(
-                                    width: 24.w,
-                                    height: 24.w,
-                                    child: const CircularProgressIndicator(
-                                      color: AppColors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    isLast
-                                        ? (widget.isEditing
-                                              ? 'Save Changes ✨'
-                                              : 'Complete My Profile ✨')
-                                        : 'Continue',
-                                    style: AppTextStyles.buttonLarge.copyWith(
-                                      fontSize: 16.sp,
-                                      color: saveDisabled
-                                          ? AppColors.textFaded
-                                          : null,
-                                    ),
-                                  ),
+                            ),
                           ),
                         ),
                       ),

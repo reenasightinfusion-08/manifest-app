@@ -201,10 +201,7 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
             padding: EdgeInsets.only(right: 20.w),
             child: Center(
               child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 10.w,
-                  vertical: 4.h,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceLight,
                   borderRadius: BorderRadius.circular(12.r),
@@ -255,10 +252,7 @@ class _VisionBoardCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(
-              color: AppColors.borderLight,
-              width: 1.2.w,
-            ),
+            border: Border.all(color: AppColors.borderLight, width: 1.2.w),
             boxShadow: [
               BoxShadow(
                 color: AppColors.purple.withValues(alpha: 0.04),
@@ -463,9 +457,7 @@ class _ReleaseConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.r)),
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
@@ -729,9 +721,7 @@ class _VisionBoardLoadingScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // RepaintBoundary isolates the 60 FPS animation ticker from the text
-            const RepaintBoundary(
-              child: _FloatingCosmicBall(),
-            ),
+            const RepaintBoundary(child: _FloatingCosmicBall()),
             22.verticalSpace,
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -803,10 +793,7 @@ class _FloatingCosmicBallState extends State<_FloatingCosmicBall>
           opacity: opacity,
           child: Text(
             '✦',
-            style: TextStyle(
-              fontSize: 16.sp,
-              color: const Color(0xFFAB6FF5),
-            ),
+            style: TextStyle(fontSize: 16.sp, color: const Color(0xFFAB6FF5)),
           ),
         ),
       ),
@@ -829,10 +816,7 @@ class _FloatingCosmicBallState extends State<_FloatingCosmicBall>
             _sparkle(44, -26, (t + 0.4) % 1.0),
             _sparkle(-34, 30, (t + 0.7) % 1.0),
             _sparkle(40, 26, (t + 0.25) % 1.0),
-            Transform.translate(
-              offset: Offset(0, floatOffset),
-              child: child,
-            ),
+            Transform.translate(offset: Offset(0, floatOffset), child: child),
           ],
         );
       },

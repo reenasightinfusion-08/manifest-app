@@ -14,12 +14,15 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _nameController;
   String? _tempAvatar;
+  bool _isSaving = false;
+  bool _lastHasChanges = false;
 
   @override
   void initState() {
     super.initState();
     final userProvider = context.read<UserProvider>();
     _nameController = TextEditingController(text: userProvider.name);
+    _nameController.addListener(_onNameChanged);
 
     // Precache all 30 memojis in background so selecting/switching is instant (0ms)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -35,8 +38,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
   }
 
+  void _onNameChanged() {
+    final current = _hasChanges(context.read<UserProvider>());
+    if (current != _lastHasChanges) {
+      _lastHasChanges = current;
+      if (mounted) setState(() {});
+    }
+  }
+
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
   }
@@ -173,8 +185,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  void _saveProfile(UserProvider provider) {
-    if (_nameController.text.trim().isEmpty) {
+  bool _hasChanges(UserProvider provider) {
+    final inputName = _nameController.text.trim();
+    if (inputName.isEmpty) return false;
+
+    final nameChanged = inputName != provider.name.trim();
+    final avatarChanged =
+        _tempAvatar != null && _tempAvatar != provider.profileImage;
+
+    return nameChanged || avatarChanged;
+  }
+
+  Future<void> _saveProfile(UserProvider provider) async {
+    if (!_hasChanges(provider) || _isSaving) return;
+
+    final trimmedName = _nameController.text.trim();
+    if (trimmedName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -190,27 +216,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       return;
     }
-    provider.updateName(_nameController.text);
+
+    setState(() => _isSaving = true);
+    provider.updateName(trimmedName);
     if (_tempAvatar != null) {
       provider.updateAvatar(_tempAvatar!);
     }
 
-    // Attempt backend sync
-    provider.syncToApi().catchError((e) {
-      debugPrint('Sync warning: $e');
-    });
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Profile synchronized with the universe. 🌌',
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+    try {
+      await provider.syncToApi();
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Profile synchronized with the universe. 🌌',
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
         ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint('Sync warning: $e');
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Saved locally. Changes will sync once connected. ✨',
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+          ),
+          backgroundColor: AppColors.purple,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -391,7 +433,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 // ── Save Button ──────────────────────────────────────────────
                 PrimaryButton(
                   label: 'SAVE CHANGES ✨',
-                  onPressed: () => _saveProfile(provider),
+                  isLoading: _isSaving,
+                  onPressed: _hasChanges(provider) && !_isSaving
+                      ? () => _saveProfile(provider)
+                      : null,
                 ),
 
                 20.verticalSpace,

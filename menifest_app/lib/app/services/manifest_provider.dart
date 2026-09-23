@@ -116,17 +116,48 @@ class ManifestProvider with ChangeNotifier {
   List<dynamic> _history = [];
   List<dynamic> get history => _history;
 
-  /// Distinct goals the user has manifested for, not just total
-  /// manifestation runs — trimmed + case-folded the same way
-  /// [generateManifestationPlan]'s duplicate check compares `goal_title`,
-  /// so re-running the exact same goal only counts once here too.
-  int get distinctGoalsCount {
-    final titles = <String>{};
-    for (final item in _history) {
-      final title = item['goal_title']?.toString().trim().toLowerCase();
-      if (title != null && title.isNotEmpty) titles.add(title);
+  /// Plans whose every step has been opened — see [markStepRead].
+  int get manifestedCount =>
+      _history.where((item) => item['is_manifested'] == true).length;
+
+  /// Records that step [stepIndex] of a plan was opened. Once every step
+  /// has been opened at least once (across any number of sessions), the
+  /// manifestation is marked as manifested on the server.
+  Future<void> markStepRead(
+    String? manifestationId,
+    int stepIndex,
+    int totalSteps,
+  ) async {
+    if (manifestationId == null || manifestationId.isEmpty || totalSteps == 0) {
+      return;
     }
-    return titles.length;
+    final item = _history.cast<Map<String, dynamic>?>().firstWhere(
+      (h) => h?['id'].toString() == manifestationId,
+      orElse: () => null,
+    );
+    if (item?['is_manifested'] == true) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'read_steps_$manifestationId';
+      final read = (prefs.getStringList(key) ?? <String>[]).toSet()
+        ..add(stepIndex.toString());
+      await prefs.setStringList(key, read.toList());
+
+      final allRead = List.generate(totalSteps, (i) => i.toString())
+          .every(read.contains);
+      if (!allRead) return;
+
+      final success = await _apiService.markManifested(manifestationId);
+      if (!success) return;
+      await prefs.remove(key);
+      if (item != null) {
+        item['is_manifested'] = true;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Mark step read error: $e');
+    }
   }
 
   // The streak is NOT computed from _history — it's stored on the

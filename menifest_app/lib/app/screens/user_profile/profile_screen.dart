@@ -36,9 +36,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final isLoadingInitial =
             manifestProvider.isLoadingHistory &&
             manifestProvider.history.isEmpty;
-        final manifestedCount = manifestProvider.history.length.toString();
+        final manifestedCount = manifestProvider.manifestedCount.toString();
         final streakCount = manifestProvider.streakCount.toString();
-        final goalsCount = manifestProvider.distinctGoalsCount.toString();
+        final goalsCount = manifestProvider.history.length.toString();
         final archetypeName =
             (userProvider.archetypeData?['archetype_name'] as String?) ??
             'Cosmic Visionary';
