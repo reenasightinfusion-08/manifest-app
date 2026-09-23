@@ -152,6 +152,9 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
                         onPressed: () => Navigator.pop(ctx, false),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.textGrey,
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14.r),
                             side: BorderSide(
@@ -180,6 +183,9 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
                           backgroundColor: Colors.red.shade600,
                           foregroundColor: AppColors.white,
                           elevation: 0,
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14.r),
                           ),

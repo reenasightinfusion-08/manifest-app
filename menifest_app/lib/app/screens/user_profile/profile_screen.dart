@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/user_provider.dart';
@@ -202,11 +204,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // ── Big Glowing Avatar (Original Size, No Pencil) ──
+                            // ── Big Glowing Avatar with Zoom on Tap ──
                             GestureDetector(
-                              onTap: () => Navigator.pushNamed(
+                              onTap: () => _showAvatarZoom(
                                 context,
-                                AppRoutes.editProfile,
+                                userProvider.profileImage,
+                                userProvider.name,
                               ),
                               child: Stack(
                                 alignment: Alignment.center,
@@ -814,4 +817,119 @@ class _MenuTile extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showAvatarZoom(BuildContext context, String imageUrl, String name) {
+  HapticFeedback.lightImpact();
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'DismissAvatarZoom',
+    barrierColor: Colors.black.withValues(alpha: 0.72),
+    transitionDuration: const Duration(milliseconds: 320),
+    pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutBack,
+        reverseCurve: Curves.easeInCubic,
+      );
+
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: 16 * animation.value,
+            sigmaY: 16 * animation.value,
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Center(
+              child: FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut,
+                ),
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.35, end: 1.0).animate(curved),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 260.r,
+                        height: 260.r,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.purple.withValues(alpha: 0.45),
+                              blurRadius: 40.r,
+                              spreadRadius: 6.r,
+                            ),
+                            BoxShadow(
+                              color: AppColors.pink.withValues(alpha: 0.35),
+                              blurRadius: 60.r,
+                              spreadRadius: 2.r,
+                            ),
+                          ],
+                        ),
+                        child: Container(
+                          padding: EdgeInsets.all(5.r),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: AppColors.primaryGradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Container(
+                            padding: EdgeInsets.all(4.r),
+                            decoration: const BoxDecoration(
+                              color: AppColors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: ClipOval(
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, _) => Container(
+                                  color: AppColors.surfaceLight,
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    color: AppColors.purple,
+                                    size: 110.sp,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      20.verticalSpace,
+                      Text(
+                        name,
+                        style: AppTextStyles.headingLarge.copyWith(
+                          color: AppColors.white,
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.w800,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
