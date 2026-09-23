@@ -295,25 +295,37 @@ class UserProvider with ChangeNotifier {
   bool _isFetchingArchetype = false;
   bool get isFetchingArchetype => _isFetchingArchetype;
 
+  String? _archetypeError;
+  String? get archetypeError => _archetypeError;
+
   Map<String, dynamic>? _archetypeData;
   Map<String, dynamic>? get archetypeData => _archetypeData;
 
   String _getAnswersHash() {
-    return '${personalAnswers.join('|')}###${familyAnswers.join('|')}###${professionalAnswers.join('|')}';
+    return '${personalAnswers.map((s) => s.trim()).join('|')}###'
+        '${familyAnswers.map((s) => s.trim()).join('|')}###'
+        '${professionalAnswers.map((s) => s.trim()).join('|')}';
   }
 
   Future<void> fetchArchetype({bool force = false}) async {
-    if (_userId == null) return;
+    if (_userId == null || _userId!.isEmpty) return;
+    if (_isFetchingArchetype) return;
+
+    // Avoid querying archetype endpoint if survey answers haven't been loaded or answered
+    final hasAnswers =
+        personalAnswers.any((a) => a.trim().isNotEmpty) ||
+        familyAnswers.any((a) => a.trim().isNotEmpty) ||
+        professionalAnswers.any((a) => a.trim().isNotEmpty);
+    if (!hasAnswers) return;
 
     final currentHash = _getAnswersHash();
 
-    // 1. Cache check: only reuse cached archetype if answers haven't changed
+    // 1. Cache check: only reuse cached archetype if answers haven't changed and not forced
     if (!force) {
       try {
         final prefs = await SharedPreferences.getInstance();
         final savedHash = prefs.getString('cached_archetype_hash_$_userId');
 
-        // Only valid if an existing hash matches the current survey answers exactly
         final isCacheValid = savedHash != null && savedHash == currentHash;
 
         if (isCacheValid) {
@@ -323,33 +335,46 @@ class UserProvider with ChangeNotifier {
           final cached = prefs.getString('cached_archetype_$_userId');
           if (cached != null && cached.isNotEmpty) {
             _archetypeData = jsonDecode(cached) as Map<String, dynamic>;
+            _archetypeError = null;
             notifyListeners();
             return;
           }
-        } else {
-          // Answers changed or old cache without hash: clear stale data
-          _archetypeData = null;
-          await prefs.remove('cached_archetype_$_userId');
-          await prefs.remove('cached_archetype_hash_$_userId');
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Failed to read archetype cache: $e');
+      }
     }
 
     _isFetchingArchetype = true;
+    _archetypeError = null;
     notifyListeners();
 
     try {
-      _archetypeData = await _apiService.generateArchetype(_userId!);
+      final data = await _apiService.generateArchetype(_userId!);
+      _archetypeData = data;
+      _archetypeError = null;
+
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-          'cached_archetype_$_userId',
-          jsonEncode(_archetypeData),
-        );
+        await prefs.setString('cached_archetype_$_userId', jsonEncode(data));
         await prefs.setString('cached_archetype_hash_$_userId', currentHash);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Failed to persist archetype cache: $e');
+      }
     } catch (e) {
       debugPrint('Failed to fetch archetype: $e');
+      _archetypeError = e.toString();
+
+      // Graceful offline fallback: if no archetype is in memory, attempt reading last known cache
+      if (_archetypeData == null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final cached = prefs.getString('cached_archetype_$_userId');
+          if (cached != null && cached.isNotEmpty) {
+            _archetypeData = jsonDecode(cached) as Map<String, dynamic>;
+          }
+        } catch (_) {}
+      }
     } finally {
       _isFetchingArchetype = false;
       notifyListeners();
@@ -484,7 +509,7 @@ class UserProvider with ChangeNotifier {
     }
     if (_showOnboardingErrors && value.trim().isNotEmpty) {
       // Check if all fields for current step are now filled to clear errors
-      if (isStepComplete(_onboardingStep)) {
+      if (getAnswersFor(step).every((a) => a.trim().isNotEmpty)) {
         _showOnboardingErrors = false;
       }
     }
@@ -758,7 +783,9 @@ class UserProvider with ChangeNotifier {
     _profileImage =
         'https://cdn.jsdelivr.net/gh/alohe/memojis@main/png/memo_1.png';
     _archetypeData = null;
+    _archetypeError = null;
     _onboardingStep = 0;
+    _cachedProfileComplete = false;
 
     // Reset answers
     for (int i = 0; i < 5; i++) {

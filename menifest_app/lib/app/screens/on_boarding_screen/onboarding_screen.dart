@@ -116,25 +116,48 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: List.generate(provider.pages.length, (i) {
-                          final bool active = i == provider.currentPage;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: EdgeInsets.only(right: 8.w),
-                            width: active ? 28.w : 8.w,
-                            height: 8.w,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(4.r),
-                              gradient: active
-                                  ? const LinearGradient(
-                                      colors: AppColors.primaryGradient,
-                                    )
-                                  : null,
-                              color: active ? null : AppColors.stepDotInactive,
-                            ),
+                      AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, _) {
+                          double page = provider.currentPage.toDouble();
+                          if (_pageController.hasClients &&
+                              _pageController.page != null) {
+                            page = _pageController.page!;
+                          }
+                          return Row(
+                            children: List.generate(provider.pages.length, (i) {
+                              final diff = (page - i).abs();
+                              final t = (1.0 - diff).clamp(0.0, 1.0);
+                              final width = 12.w + (12.w * t);
+                              return Container(
+                                margin: EdgeInsets.only(
+                                  right: i == provider.pages.length - 1
+                                      ? 0
+                                      : 5.w,
+                                ),
+                                width: width,
+                                height: 8.w,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4.r),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Color.lerp(
+                                        AppColors.stepDotInactive,
+                                        AppColors.primaryGradient[0],
+                                        t,
+                                      )!,
+                                      Color.lerp(
+                                        AppColors.stepDotInactive,
+                                        AppColors.primaryGradient[1],
+                                        t,
+                                      )!,
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
                           );
-                        }),
+                        },
                       ),
                       GestureDetector(
                         onTap: () => _next(context),

@@ -20,6 +20,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = context.read<UserProvider>();
       if (user.userId != null) {
         context.read<ManifestProvider>().loadHistory(user.userId!);
+        if (user.archetypeData == null) {
+          user.fetchArchetype();
+        }
       }
     });
   }
@@ -34,6 +37,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final manifestedCount = manifestProvider.history.length.toString();
         final streakCount = manifestProvider.streakCount.toString();
         final goalsCount = manifestProvider.distinctGoalsCount.toString();
+        final archetypeName =
+            (userProvider.archetypeData?['archetype_name'] as String?) ??
+            'Cosmic Visionary';
 
         return Scaffold(
           backgroundColor: AppColors.white,
@@ -41,29 +47,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverAppBar(
-                expandedHeight: 350.h,
+                expandedHeight: 340.h,
                 backgroundColor: AppColors.white,
-                surfaceTintColor: AppColors.white,
+                surfaceTintColor: Colors.transparent,
                 elevation: 0,
                 pinned: true,
                 stretch: true,
-                leading: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: AppColors.textDark,
+                leadingWidth: 68.w,
+                leading: Padding(
+                  padding: EdgeInsets.only(left: 18.w),
+                  child: Center(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(22.r),
+                        child: Container(
+                          width: 40.r,
+                          height: 40.r,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: 0.92),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.borderLight,
+                              width: 1.2.w,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.purple.withValues(alpha: 0.08),
+                                blurRadius: 10.r,
+                                offset: Offset(0, 3.h),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textDark,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  onPressed: () => Navigator.pop(context),
                 ),
                 actions: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.settings_suggest_rounded,
-                      color: AppColors.textDark,
+                  Padding(
+                    padding: EdgeInsets.only(right: 18.w),
+                    child: Center(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.editProfile,
+                          ),
+                          borderRadius: BorderRadius.circular(22.r),
+                          child: Container(
+                            width: 40.r,
+                            height: 40.r,
+                            decoration: BoxDecoration(
+                              color: AppColors.white.withValues(alpha: 0.92),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.borderLight,
+                                width: 1.2.w,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.purple.withValues(
+                                    alpha: 0.08,
+                                  ),
+                                  blurRadius: 10.r,
+                                  offset: Offset(0, 3.h),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.tune_rounded,
+                              color: AppColors.textDark,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    onPressed: () =>
-                        Navigator.pushNamed(context, AppRoutes.editProfile),
                   ),
-                  10.horizontalSpace,
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   stretchModes: const [
@@ -73,144 +141,216 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   background: Stack(
                     alignment: Alignment.center,
                     children: [
+                      // Smooth cosmic atmospheric background
                       Positioned.fill(
                         child: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: AppColors.softGradient,
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color(0xFFECE4FA), // soft luminous lavender
+                                Color(0xFFFBF4FA), // gentle blush
+                                AppColors.white, // seamless blend into content
+                              ],
+                              stops: [0.0, 0.65, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Soft ambient aura glows without harsh banding
+                      Positioned(
+                        top: -30.h,
+                        right: -30.w,
+                        child: Container(
+                          width: 200.r,
+                          height: 200.r,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                AppColors.purpleLight.withValues(alpha: 0.12),
+                                AppColors.transparent,
+                              ],
                             ),
                           ),
                         ),
                       ),
                       Positioned(
-                        top: -50.h,
-                        right: -50.w,
-                        child: _GlowCircle(
-                          color: AppColors.purple.withValues(alpha: 0.08),
-                          size: 280.r,
+                        top: 70.h,
+                        left: -40.w,
+                        child: Container(
+                          width: 180.r,
+                          height: 180.r,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                AppColors.pinkLight.withValues(alpha: 0.10),
+                                AppColors.transparent,
+                              ],
+                            ),
+                          ),
                         ),
                       ),
+                      // Profile Identity Section
                       Positioned(
-                        bottom: -20.h,
-                        left: -30.w,
-                        child: _GlowCircle(
-                          color: AppColors.pink.withValues(alpha: 0.07),
-                          size: 220.r,
-                        ),
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          60.verticalSpace,
-                          Container(
-                            padding: EdgeInsets.all(4.w),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: AppColors.primaryGradient,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.purple.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  blurRadius: 30.w,
-                                  spreadRadius: 2.w,
-                                ),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 60.w,
-                              backgroundColor: AppColors.white,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  image: DecorationImage(
-                                    image: NetworkImage(
-                                      userProvider.profileImage,
-                                    ),
-                                    fit: BoxFit.cover,
-                                  ),
-                                  border: Border.all(
-                                    color: AppColors.white,
-                                    width: 2.w,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          20.verticalSpace,
-                          Text(
-                            userProvider.name,
-                            style: AppTextStyles.headingLarge.copyWith(
-                              fontSize: 28.sp,
-                              color: AppColors.textDark,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          8.verticalSpace,
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(20.r),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.black.withValues(
-                                    alpha: 0.04,
-                                  ),
-                                  blurRadius: 8.r,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ShaderMask(
-                                  shaderCallback: (bounds) =>
-                                      const LinearGradient(
-                                        colors: AppColors.primaryGradient,
-                                      ).createShader(bounds),
-                                  child: Icon(
-                                    Icons.auto_awesome,
-                                    color: AppColors.white,
-                                    size: 14.sp,
-                                  ),
-                                ),
-                                8.horizontalSpace,
-                                Text(
-                                  'Cosmic Visionary',
-                                  style: AppTextStyles.label.copyWith(
-                                    color: AppColors.purple,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 11.sp,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      // ── Upward circular corner sheet (from opposite side) ──
-                      Positioned(
-                        bottom: -1,
+                        bottom: 10.h,
                         left: 0,
                         right: 0,
-                        child: Container(
-                          height: 30.h,
-                          decoration: BoxDecoration(
-                            color: AppColors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(30.r),
-                              topRight: Radius.circular(30.r),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // ── Big Glowing Avatar (Original Size, No Pencil) ──
+                            GestureDetector(
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                AppRoutes.editProfile,
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Outer soft atmospheric glow
+                                  Container(
+                                    width: 124.r,
+                                    height: 124.r,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.purple.withValues(
+                                            alpha: 0.20,
+                                          ),
+                                          blurRadius: 28.r,
+                                          spreadRadius: 2.r,
+                                          offset: Offset(0, 8.h),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Gradient halo ring (original big size)
+                                  Container(
+                                    width: 124.r,
+                                    height: 124.r,
+                                    padding: EdgeInsets.all(4.r),
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: AppColors.primaryGradient,
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
+                                    child: Container(
+                                      padding: EdgeInsets.all(3.r),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: ClipOval(
+                                        child: Image.network(
+                                          userProvider.profileImage,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, _) =>
+                                              Container(
+                                                color: AppColors.surfaceLight,
+                                                child: const Icon(
+                                                  Icons.person_rounded,
+                                                  color: AppColors.purple,
+                                                  size: 54,
+                                                ),
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                            14.verticalSpace,
+                            // ── User Name ──
+                            Text(
+                              userProvider.name,
+                              style: AppTextStyles.headingLarge.copyWith(
+                                fontSize: 26.sp,
+                                color: AppColors.textDark,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            8.verticalSpace,
+                            // ── Interactive Spiritual Archetype Badge ──
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.spiritualArchetype,
+                                ),
+                                borderRadius: BorderRadius.circular(24.r),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 16.w,
+                                    vertical: 7.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white.withValues(
+                                      alpha: 0.95,
+                                    ),
+                                    borderRadius: BorderRadius.circular(24.r),
+                                    border: Border.all(
+                                      color: AppColors.purple.withValues(
+                                        alpha: 0.20,
+                                      ),
+                                      width: 1.2.w,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.purple.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        blurRadius: 14.r,
+                                        offset: Offset(0, 4.h),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ShaderMask(
+                                        shaderCallback: (bounds) =>
+                                            const LinearGradient(
+                                              colors: AppColors.primaryGradient,
+                                            ).createShader(bounds),
+                                        child: Icon(
+                                          Icons.auto_awesome,
+                                          color: AppColors.white,
+                                          size: 14.sp,
+                                        ),
+                                      ),
+                                      8.horizontalSpace,
+                                      Text(
+                                        archetypeName,
+                                        style: AppTextStyles.label.copyWith(
+                                          color: AppColors.purple,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12.sp,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                      6.horizontalSpace,
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: AppColors.purpleLight,
+                                        size: 10.sp,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -590,88 +730,87 @@ class _MenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 16.h),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20.r),
-        child: Container(
-          padding: EdgeInsets.all(16.r),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceVeryLight,
-            borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(color: AppColors.borderVeryLight),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(12.r),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.black.withValues(alpha: 0.03),
-                      blurRadius: 8.r,
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18.r),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(18.r),
+              border: Border.all(color: AppColors.borderLight, width: 1.w),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.purple.withValues(alpha: 0.03),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44.r,
+                  height: 44.r,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.borderLight,
+                      width: 1.w,
                     ),
-                  ],
+                  ),
+                  child: ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: AppColors.primaryGradient,
+                    ).createShader(bounds),
+                    child: Icon(icon, color: AppColors.white, size: 22.sp),
+                  ),
                 ),
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: AppColors.primaryGradient,
-                  ).createShader(bounds),
-                  child: Icon(icon, color: AppColors.white, size: 24.sp),
-                ),
-              ),
-              20.horizontalSpace,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16.sp,
+                16.horizontalSpace,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.textDark,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15.sp,
+                        ),
                       ),
-                    ),
-                    4.verticalSpace,
-                    Text(
-                      subtitle,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textGrey,
+                      3.verticalSpace,
+                      Text(
+                        subtitle,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textGrey,
+                          fontSize: 12.sp,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textLightGrey,
-                size: 24.sp,
-              ),
-            ],
+                Container(
+                  width: 28.r,
+                  height: 28.r,
+                  decoration: const BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textLightGrey,
+                    size: 18.sp,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _GlowCircle extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _GlowCircle({required this.color, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
       ),
     );
   }
