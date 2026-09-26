@@ -21,6 +21,9 @@ class PrivacySettingsScreen extends StatefulWidget {
 }
 
 class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showAppBarTitle = false;
+
   Future<void> _onBiometricToggle(bool enable) async {
     final provider = context.read<UserProvider>();
 
@@ -59,6 +62,25 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
       );
     }
   }
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScrollForAppBarTitle);
+  }
+
+  void _handleScrollForAppBarTitle(){
+    final collapseDistance = 210.h - kToolbarHeight;
+    final shouldShow = _scrollController.offset >= collapseDistance;
+    if(shouldShow != _showAppBarTitle) {
+      setState(() => _showAppBarTitle = shouldShow
+      );
+    }
+  }
+  @override
+  void dispose() {
+    super.dispose();
+    _scrollController.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,16 +89,32 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.white,
       body: CustomScrollView(
+        controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
           // ── Header ────────────────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 210.h,
-            backgroundColor: AppColors.white,
+            backgroundColor: AppColors.purple,
             surfaceTintColor: AppColors.white,
             elevation: 0,
             pinned: true,
             stretch: true,
+            scrolledUnderElevation: 0,
+            shadowColor: AppColors.transparent,
+            centerTitle: true,
+            title: AnimatedOpacity(
+              opacity: _showAppBarTitle ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: Text(
+                'Privacy Setting',
+                style: AppTextStyles.headingSmall.copyWith(
+                  color: AppColors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
             leadingWidth: 68.w,
             leading: Padding(
               padding: EdgeInsets.only(left: 18.w),

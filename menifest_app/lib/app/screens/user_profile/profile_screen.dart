@@ -15,6 +15,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showAppBarTitle = false;
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +30,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     });
+    _scrollController.addListener(_handleScrollForAppBarTitle);
+  }
+  void _handleScrollForAppBarTitle(){
+    final collapseDistance = 340.h - kToolbarHeight;
+    final shouldShow = _scrollController.offset >= collapseDistance;
+    if(shouldShow != _showAppBarTitle) {
+      setState(() => _showAppBarTitle = shouldShow
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _scrollController.dispose();
   }
 
   @override
@@ -46,15 +64,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Scaffold(
           backgroundColor: AppColors.white,
           body: CustomScrollView(
+            controller: _scrollController,
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverAppBar(
                 expandedHeight: 340.h,
-                backgroundColor: AppColors.white,
+                backgroundColor: AppColors.purple,
                 surfaceTintColor: Colors.transparent,
+                shadowColor: AppColors.transparent,
                 elevation: 0,
                 pinned: true,
                 stretch: true,
+                centerTitle: true,
+                title: AnimatedOpacity(
+                  opacity: _showAppBarTitle ? 1 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Text(
+                    'Profile',
+                    style: AppTextStyles.headingSmall.copyWith(
+                      color: AppColors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
                 leadingWidth: 68.w,
                 leading: Padding(
                   padding: EdgeInsets.only(left: 18.w),
@@ -68,10 +101,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           width: 40.r,
                           height: 40.r,
                           decoration: BoxDecoration(
-                            color: AppColors.white.withValues(alpha: 0.92),
+                            color: AppColors.white.withValues(alpha: _showAppBarTitle ? 0.22 : 0.92),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppColors.borderLight,
+                              color: _showAppBarTitle ? AppColors.white.withValues(alpha: 0.35) : AppColors.borderLight,
                               width: 1.2.w,
                             ),
                             boxShadow: [
@@ -82,9 +115,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ],
                           ),
-                          child: const Icon(
+                          child:  Icon(
                             Icons.arrow_back_ios_new_rounded,
-                            color: AppColors.textDark,
+                            color: _showAppBarTitle ? AppColors.white : AppColors.textDark,
                             size: 16,
                           ),
                         ),
@@ -108,10 +141,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             width: 40.r,
                             height: 40.r,
                             decoration: BoxDecoration(
-                              color: AppColors.white.withValues(alpha: 0.92),
+                              color: AppColors.white.withValues(alpha: _showAppBarTitle ? 0.22 : 0.92),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppColors.borderLight,
+                                color: _showAppBarTitle ? AppColors.white.withValues(alpha: 0.35) : AppColors.borderLight,
                                 width: 1.2.w,
                               ),
                               boxShadow: [
@@ -124,9 +157,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child:  Icon(
                               Icons.tune_rounded,
-                              color: AppColors.textDark,
+                              color: _showAppBarTitle ? AppColors.white : AppColors.textDark,
                               size: 18,
                             ),
                           ),
