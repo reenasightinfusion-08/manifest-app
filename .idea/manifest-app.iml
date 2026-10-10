@@ -6,6 +6,15 @@
       <excludeFolder url="file://$MODULE_DIR$/menifest_app/.dart_tool" />
       <excludeFolder url="file://$MODULE_DIR$/menifest_app/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/menifest_app/build" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/gtk/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/gtk/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/gtk/build" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/gtk/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/gtk/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/gtk/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/jni/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/jni/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/menifest_app/linux/flutter/ephemeral/.plugin_symlinks/jni/build" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
