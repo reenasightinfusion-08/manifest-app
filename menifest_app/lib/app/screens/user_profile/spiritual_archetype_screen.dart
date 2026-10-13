@@ -3,6 +3,9 @@ import 'package:menifest_app/app/services/user_provider.dart';
 import 'package:menifest_app/app/widgets/primary_button.dart';
 import 'package:menifest_app/core/common/core.dart';
 import 'package:provider/provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart' show TemplateType;
+import 'package:menifest_app/app/ads/banner_ad_widget.dart';
+import 'package:menifest_app/app/ads/native_ad_widget.dart';
 
 class SpiritualArchetypeScreen extends StatefulWidget {
   const SpiritualArchetypeScreen({super.key});
@@ -117,6 +120,7 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
               ),
             ),
           ),
+          bottomNavigationBar: const SafeArea(child: BannerAdWidget()),
           body: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 40.h),
             child: Column(
@@ -210,7 +214,9 @@ class _SpiritualArchetypeScreenState extends State<SpiritualArchetypeScreen> {
                 ),
                 12.verticalSpace,
                 _VisionCard(text: visionText, color: palette[0]),
-                36.verticalSpace,
+                32.verticalSpace,
+                const NativeAdWidget(templateType: TemplateType.small),
+                48.verticalSpace,
 
                 PrimaryButton(
                   label: buttonLabel,

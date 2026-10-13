@@ -6,6 +6,10 @@ import '../../../core/common/core.dart';
 import '../../services/user_provider.dart';
 import '../../services/manifest_provider.dart';
 import '../on_boarding_screen/profile_setup_screen.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart' show TemplateType;
+import '../../ads/ad_gate.dart';
+import '../../ads/banner_ad_widget.dart';
+import '../../ads/native_ad_widget.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,6 +19,16 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  void _openArchetype(BuildContext context) => AdGate.run(
+    context,
+    key: 'archetype',
+    title: 'Unlock your Spiritual Archetype',
+    message:
+        'Watch a short ad to unlock your manifestation DNA. It stays unlocked for 24 hours.',
+    onUnlocked: () =>
+        Navigator.pushNamed(context, AppRoutes.spiritualArchetype),
+  );
+
   final ScrollController _scrollController = ScrollController();
   bool _showAppBarTitle = false;
 
@@ -63,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         return Scaffold(
           backgroundColor: AppColors.white,
+          bottomNavigationBar: const SafeArea(child: BannerAdWidget()),
           body: CustomScrollView(
             controller: _scrollController,
             physics: const BouncingScrollPhysics(),
@@ -320,10 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: () => Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.spiritualArchetype,
-                                ),
+                                onTap: () => _openArchetype(context),
                                 borderRadius: BorderRadius.circular(24.r),
                                 child: Container(
                                   padding: EdgeInsets.symmetric(
@@ -473,17 +485,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         label: 'Spiritual Archetype',
                         subtitle: 'Your manifestation DNA and patterns',
                         icon: Icons.psychology_rounded,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.spiritualArchetype,
-                        ),
+                        onTap: () => _openArchetype(context),
                       ),
                       _MenuTile(
                         label: 'Vision Board',
                         subtitle: 'Active dream manifestations',
                         icon: Icons.auto_graph_rounded,
-                        onTap: () =>
-                            Navigator.pushNamed(context, AppRoutes.visionBoard),
+                        onTap: () => AdGate.run(
+                          context,
+                          key: 'vision_board',
+                          title: 'Support Manifest',
+                          message:
+                              'Watch a short ad to support Manifest. You won\'t be asked again for 24 hours.',
+                          interstitialStyle: true,
+                          blocking: false,
+                          onUnlocked: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.visionBoard,
+                          ),
+                        ),
                       ),
                       _MenuTile(
                         label: 'Privacy Settings',
@@ -503,7 +523,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           AppRoutes.notificationSettings,
                         ),
                       ),
-                      40.verticalSpace,
+                      32.verticalSpace,
+                      const NativeAdWidget(templateType: TemplateType.small),
+                      48.verticalSpace,
                       Center(
                         child: Column(
                           children: [

@@ -4,6 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/common/core.dart';
 import '../../services/manifest_provider.dart';
+import '../../ads/ad_service.dart';
 
 class ActionDetailScreen extends StatefulWidget {
   final List<Map<String, dynamic>> steps;
@@ -31,6 +32,26 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
   bool _isTransitioning = false;
   bool _showAppBarTitle = false;
   late int _currentIndex;
+  bool _reachedLast = false;
+  bool _adHandled = false;
+
+  // Leaving after the final step shows the ad whether the user taps Done,
+  // the back arrow, or uses the system back gesture.
+  bool get _mustShowAdOnExit => _reachedLast && !_adHandled;
+
+  void _exit() {
+    if (!_mustShowAdOnExit) {
+      Navigator.pop(context);
+      return;
+    }
+    _adHandled = true;
+    AdService.maybeShowInterstitial(
+      force: true,
+      onClosed: () {
+        if (mounted) Navigator.pop(context);
+      },
+    );
+  }
 
   Map<String, dynamic> get _cardData => widget.steps[_currentIndex];
   bool get _hasPrevious => _currentIndex > 0;
@@ -40,6 +61,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex.clamp(0, widget.steps.length - 1);
+    _reachedLast = _currentIndex == widget.steps.length - 1;
     final provider = context.read<ManifestProvider>();
     _initTts(provider);
     _pulseController = AnimationController(
@@ -112,7 +134,10 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
       provider.setPlaying(false);
     }
     if (!mounted) return;
-    setState(() => _currentIndex = newIndex);
+    setState(() {
+      _currentIndex = newIndex;
+      if (newIndex == widget.steps.length - 1) _reachedLast = true;
+    });
     _markCurrentStepRead();
     if (_scrollController.hasClients) {
       _scrollController.jumpTo(0);
@@ -246,7 +271,12 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !_mustShowAdOnExit,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _exit();
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8F5FF),
       body: Consumer<ManifestProvider>(
         builder: (context, provider, _) => Stack(
@@ -284,7 +314,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                   leadingWidth: 56.w,
                   leading: Center(
                     child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: _exit,
                       child: Container(
                         width: 38.r,
                         height: 38.r,
@@ -637,7 +667,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
                                       icon: Icons.check_rounded,
                                       filled: true,
                                       iconLeading: false,
-                                      onTap: () => Navigator.pop(context),
+                                      onTap: _exit,
                                     ),
                             ),
                           ],
@@ -655,6 +685,7 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
           ],
         ),
       ),
+    ),
     );
   }
 }

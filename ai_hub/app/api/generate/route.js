@@ -20,11 +20,48 @@ function getSettings() {
   };
 }
 
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
+
+// Models sometimes wrap JSON in ```json fences even in JSON mode.
+function parseJson(text) {
+  return JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
+}
+
+// files: [{ mimeType: 'image/jpeg' | 'application/pdf' | ..., data: <base64> }]
+async function readFiles({ prompt, systemPrompt, format, files }) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({
+    model: VISION_MODEL,
+    systemInstruction: systemPrompt || undefined,
+  });
+  const result = await model.generateContent({
+    contents: [{
+      role: 'user',
+      parts: [
+        { text: prompt || 'Read the attached file.' },
+        ...files.map((f) => ({ inlineData: { mimeType: f.mimeType, data: f.data } })),
+      ],
+    }],
+    generationConfig: {
+      maxOutputTokens: 8000,
+      temperature: 0,
+      ...(format === 'json' && { responseMimeType: 'application/json' }),
+    },
+  });
+  const text = result.response.text();
+  return { success: true, provider: 'gemini', data: format === 'json' ? parseJson(text) : text };
+}
+
 export async function POST(req) {
   try {
-    const { prompt, systemPrompt, format } = await req.json();
+    const { prompt, systemPrompt, format, files } = await req.json();
     const settings = getSettings();
     const activeProvider = settings.active_provider;
+
+    // Photos and PDFs: Groq's chat model only takes text, so any request that carries files is read by Gemini.
+    if (Array.isArray(files) && files.length > 0) {
+      return NextResponse.json(await readFiles({ prompt, systemPrompt, format, files }));
+    }
 
     console.log(`[AI HUB] Routing request to: ${activeProvider}`);
 

@@ -22,6 +22,7 @@ import 'app/services/splash_provider.dart';
 import 'app/services/manifest_provider.dart';
 import 'app/services/user_provider.dart';
 import 'app/services/notification_service.dart';
+import 'app/ads/ad_service.dart';
 
 // Routes that aren't "inside the app" yet (or already are the lock screen
 // itself) — the idle timer and the background-return lock both skip these,
@@ -80,6 +81,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AdService.appOpenGuard = () => !_kLockExemptRoutes.contains(_currentRoute);
     _armIdleTimer();
   }
 

@@ -5,6 +5,9 @@ import '../../../core/common/core.dart';
 import '../../models/vision_board_item.dart';
 import '../../services/manifest_provider.dart';
 import '../../services/user_provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart' show TemplateType;
+import '../../ads/banner_ad_widget.dart';
+import '../../ads/native_ad_widget.dart';
 
 /// VisionBoardScreen displays historical manifestations and active visions.
 ///
@@ -111,6 +114,7 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
         return Scaffold(
           backgroundColor: AppColors.white,
           appBar: _buildAppBar(context, items.length),
+          bottomNavigationBar: const SafeArea(child: BannerAdWidget()),
           body: items.isEmpty
               ? const _EmptyVisionBoardView()
               : RefreshIndicator(
@@ -128,10 +132,19 @@ class _VisionBoardScreenState extends State<VisionBoardScreen> {
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
-                    itemCount: items.length,
+                    itemCount: items.length >= 4 ? items.length + 1 : items.length,
                     separatorBuilder: (context, index) => 14.verticalSpace,
                     itemBuilder: (context, index) {
-                      final item = items[index];
+                      final hasAd = items.length >= 4;
+                      if (hasAd && index == 2) {
+                        return Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10.h),
+                          child: const NativeAdWidget(
+                            templateType: TemplateType.small,
+                          ),
+                        );
+                      }
+                      final item = items[hasAd && index > 2 ? index - 1 : index];
                       return Dismissible(
                         key: ValueKey('vision_item_${item.id}_$index'),
                         direction: DismissDirection.endToStart,

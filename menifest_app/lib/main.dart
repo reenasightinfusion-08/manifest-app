@@ -9,6 +9,7 @@ import 'my_app.dart';
 import 'app/services/notification_service.dart';
 import 'app/services/api_service.dart';
 import 'app/services/crash_reporting_service.dart';
+import 'app/ads/ad_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -52,6 +53,8 @@ void main() async {
   // Restore any server address saved from the in-app connection settings
   // (Privacy Settings) so a release build survives the PC's LAN IP changing.
   await ApiService.loadSavedBaseUrl();
+
+  AdService.initialize();
 
   usePathUrlStrategy();
   runApp(const MyApp());

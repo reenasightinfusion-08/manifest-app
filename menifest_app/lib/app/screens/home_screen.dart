@@ -4,6 +4,7 @@ import '../../core/common/core.dart';
 import '../services/manifest_provider.dart';
 import '../services/user_provider.dart';
 import '../widgets/primary_button.dart';
+import '../ads/native_ad_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -738,6 +739,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ],
+
+                      // ── Native ad: between the input area and the results ──
+                      32.verticalSpace,
+                      const NativeAdWidget(),
 
                       // ── Active Cosmic Roadmap Section ──────────────────────
                       if (provider.actionCards.isNotEmpty) ...[

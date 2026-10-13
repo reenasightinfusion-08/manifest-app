@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const { newVerificationToken, sendVerificationEmail } = require('./services/emailVerificationService');
 const dns = require('dns').promises;
 const { probeMailbox } = require('./services/mailboxProbeService');
+const openapi = require('./docs/openapi');
 
 
 const app = express();
@@ -55,6 +56,19 @@ const restrictToAdmin = (req, res, next) => {
 // Health Check
 app.get('/', (req, res) => {
   res.send('Manifest Cosmic Backend is Live! ✨');
+});
+
+// API docs. Spec lives in docs/openapi.js. The UI loads from a CDN because
+// swagger-ui's bundled assets 404 on Vercel serverless.
+app.get('/api/docs.json', (req, res) => res.json(openapi));
+app.get('/api/docs', (req, res) => {
+  res.type('html').send(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Manifest API Docs</title>
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head>
+<body><div id="ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>SwaggerUIBundle({ url: '/api/docs.json', dom_id: '#ui', persistAuthorization: true });</script>
+</body></html>`);
 });
 
 // App Version & Force Update Config
