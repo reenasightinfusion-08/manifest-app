@@ -19,6 +19,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void initState() {
@@ -35,8 +36,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     _fadeController.forward();
   }
-
-  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {

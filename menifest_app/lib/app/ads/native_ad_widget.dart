@@ -6,12 +6,12 @@ import 'ad_service.dart';
 
 class NativeAdWidget extends StatefulWidget {
   final TemplateType templateType;
-  final double height;
+  final double? height;
 
   const NativeAdWidget({
     super.key,
     this.templateType = TemplateType.medium,
-    this.height = 320,
+    this.height,
   });
 
   @override
@@ -82,8 +82,9 @@ class _NativeAdWidgetState extends State<NativeAdWidget>
     final ad = _ad;
     if (ad == null || !_loaded) return const SizedBox.shrink();
     final small = widget.templateType == TemplateType.small;
+    final contentHeight = widget.height ?? (small ? 91.0 : 355.0);
     return Container(
-      height: (small ? 91 : widget.height) + 4,
+      height: contentHeight + 4,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: AppColors.white,

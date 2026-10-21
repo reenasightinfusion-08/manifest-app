@@ -194,12 +194,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.symmetric(
-                    horizontal: 22.w,
                     vertical: 16.h,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 22.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                       // ── Header: Modern, Crisp & Clean ─────────────────────
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -433,19 +437,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       20.verticalSpace,
 
-                      // ── Guided Focus Chips (Refined, Modern Category Pills) ─
-                      Text(
-                        'Focus Areas',
-                        style: TextStyle(
-                          color: AppColors.textDark,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13.5.sp,
+                            // ── Guided Focus Chips (Refined, Modern Category Pills) ─
+                            Text(
+                              'Focus Areas',
+                              style: TextStyle(
+                                color: AppColors.textDark,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13.5.sp,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       10.verticalSpace,
                       SizedBox(
                         height: 38.h,
                         child: ListView.separated(
+                          padding: EdgeInsets.only(left: 22.w),
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
                           itemCount: _promptCategories.length,
@@ -493,10 +501,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                       ),
-
                       18.verticalSpace,
-
-                      // ── Intention Canvas (Elevated, Crisp Writing Space) ───
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 22.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Intention Canvas (Elevated, Crisp Writing Space) ───
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         decoration: BoxDecoration(
@@ -897,7 +908,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
 
-                      32.verticalSpace,
+                            32.verticalSpace,
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

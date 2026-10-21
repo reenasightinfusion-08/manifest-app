@@ -1354,40 +1354,43 @@ class _QuestionCardState extends State<_QuestionCard> {
         // question (or dismisses the keyboard if the next is a choice question),
         // preventing Flutter from skipping non-text questions.
         onSubmitted: (_) => widget.onSubmitted(),
-      style: AppTextStyles.bodyMedium.copyWith(
-        color: AppColors.textDark,
-        fontSize: 14.sp,
-      ),
-      decoration: InputDecoration(
-        hintText: widget.question.hint,
-        hintStyle: AppTextStyles.hint.copyWith(
-          color: AppColors.textLightGrey,
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textDark,
           fontSize: 14.sp,
         ),
-        prefixIcon: Icon(
-          widget.question.icon,
-          color: AppColors.purple.withValues(alpha: 0.5),
-          size: 18.sp,
-        ),
-        filled: true,
-        fillColor: AppColors.surfaceLight,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide.none,
+        decoration: InputDecoration(
+          hintText: widget.question.hint,
+          hintStyle: AppTextStyles.hint.copyWith(
+            color: AppColors.textLightGrey,
+            fontSize: 14.sp,
+          ),
+          prefixIcon: Icon(
+            widget.question.icon,
+            color: AppColors.purple.withValues(alpha: 0.5),
+            size: 18.sp,
+          ),
+          filled: true,
+          fillColor: AppColors.surfaceLight,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16.w,
+            vertical: 12.h,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide.none,
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _DropdownSelectionSheet extends StatefulWidget {

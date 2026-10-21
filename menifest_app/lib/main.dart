@@ -54,7 +54,7 @@ void main() async {
   // (Privacy Settings) so a release build survives the PC's LAN IP changing.
   await ApiService.loadSavedBaseUrl();
 
-  AdService.initialize();
+  await AdService.initialize();
 
   usePathUrlStrategy();
   runApp(const MyApp());

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:menifest_app/app/services/user_provider.dart';
+import 'package:menifest_app/app/widgets/primary_button.dart';
+import 'package:menifest_app/core/common/core.dart';
 import 'package:provider/provider.dart';
-import '../../../core/common/core.dart';
-import '../../services/user_provider.dart';
-import '../../widgets/primary_button.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
