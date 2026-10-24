@@ -150,6 +150,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = context.isTablet;
+    final isLandscape = isTablet && context.isLandscape;
+
     return Consumer2<SplashProvider, UserProvider>(
       builder: (context, splash, user, _) {
         if (splash.shouldNavigate) {
@@ -158,90 +161,129 @@ class _SplashScreenState extends State<SplashScreen>
           });
         }
 
+        final double imageSize = isTablet
+            ? (isLandscape ? 210.0 : 250.0)
+            : 220.w;
+
+        final double manifestFontSize = isTablet
+            ? (isLandscape ? 40.0 : 46.0)
+            : 48.sp;
+
+        final double subtitleFontSize = isTablet ? 16.0 : 14.sp;
+
+        final Widget topSpacing = isTablet
+            ? SizedBox(height: isLandscape ? 24.0 : 40.0)
+            : 48.verticalSpace;
+
+        final Widget subtitleSpacing = isTablet
+            ? const SizedBox(height: 12.0)
+            : 12.verticalSpace;
+
+        final Widget bottomSpacing = isTablet
+            ? SizedBox(height: isLandscape ? 28.0 : 40.0)
+            : 48.verticalSpace;
+
+        final double shadowBlur = isTablet ? 32.0 : 40.r;
+        final double shadowSpread = isTablet ? 6.0 : 10.r;
+        final Offset shadowOffset = isTablet
+            ? const Offset(0, 8.0)
+            : Offset(0, 10.h);
+        final double slideOffsetY = isTablet
+            ? (_slideAnimation.value * 0.75)
+            : _slideAnimation.value.h;
+
         return Scaffold(
           backgroundColor: AppColors.white,
           body: Center(
             child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Container(
-                      height: 220.w,
-                      width: 220.w,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.pink.withValues(alpha: 0.15),
-                            blurRadius: 40.r,
-                            spreadRadius: 10.r,
-                            offset: Offset(0, 10.h),
+              padding: isTablet
+                  ? const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0)
+                  : EdgeInsets.zero,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Container(
+                          height: imageSize,
+                          width: imageSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.pink.withValues(alpha: 0.15),
+                                blurRadius: shadowBlur,
+                                spreadRadius: shadowSpread,
+                                offset: shadowOffset,
+                              ),
+                            ],
+                            image: const DecorationImage(
+                              image: AssetImage('assets/images/splash_warm.png'),
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ],
-                        image: const DecorationImage(
-                          image: AssetImage('assets/images/splash_warm.png'),
-                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                  ),
-                ),
-                48.verticalSpace,
-                AnimatedBuilder(
-                  animation: _slideAnimation,
-                  builder: (context, child) {
-                    return Transform.translate(
-                      offset: Offset(0, _slideAnimation.value.h),
-                      child: FadeTransition(
-                        opacity: _fadeAnimation,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: AppColors.primaryGradient,
-                        ).createShader(bounds),
-                        child: Text(
-                          'MANIFEST',
-                          style: AppTextStyles.displayLarge.copyWith(
-                            color: AppColors.white,
-                            fontSize: 48.sp,
+                    topSpacing,
+                    AnimatedBuilder(
+                      animation: _slideAnimation,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, slideOffsetY),
+                          child: FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: child,
                           ),
-                        ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: AppColors.primaryGradient,
+                            ).createShader(bounds),
+                            child: Text(
+                              'MANIFEST',
+                              style: AppTextStyles.displayLarge.copyWith(
+                                color: AppColors.white,
+                                fontSize: manifestFontSize,
+                                letterSpacing: isTablet ? 8.0 : 10.0,
+                              ),
+                            ),
+                          ),
+                          subtitleSpacing,
+                          Text(
+                            'create your reality',
+                            style: AppTextStyles.subtitle.copyWith(
+                              color: AppColors.textGrey,
+                              fontSize: subtitleFontSize,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          bottomSpacing,
+                          _LoadingDots(isTablet: isTablet),
+                        ],
                       ),
-                      12.verticalSpace,
-                      Text(
-                        'create your reality',
-                        style: AppTextStyles.subtitle.copyWith(
-                          color: AppColors.textGrey,
-                          fontSize: 14.sp,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      48.verticalSpace,
-                      const _LoadingDots(),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      );
+        );
       },
     );
   }
 }
 
 class _LoadingDots extends StatefulWidget {
-  const _LoadingDots();
+  final bool isTablet;
+  const _LoadingDots({this.isTablet = false});
 
   @override
   State<_LoadingDots> createState() => _LoadingDotsState();
@@ -268,6 +310,13 @@ class _LoadingDotsState extends State<_LoadingDots>
 
   @override
   Widget build(BuildContext context) {
+    final double dotSize = widget.isTablet ? 9.0 : 8.w;
+    final EdgeInsets margin = widget.isTablet
+        ? const EdgeInsets.symmetric(horizontal: 6.0)
+        : EdgeInsets.symmetric(horizontal: 5.w);
+    final double blurRadius = widget.isTablet ? 6.0 : 6.r;
+    final double spreadRadius = widget.isTablet ? 1.0 : 1.r;
+
     return AnimatedBuilder(
       animation: _dotController,
       builder: (_, _) {
@@ -284,17 +333,17 @@ class _LoadingDotsState extends State<_LoadingDots>
                                 : (1 - progress) * 2))
                     .clamp(0.0, 1.0);
             return Container(
-              margin: EdgeInsets.symmetric(horizontal: 5.w),
-              width: 8.w,
-              height: 8.w,
+              margin: margin,
+              width: dotSize,
+              height: dotSize,
               decoration: BoxDecoration(
                 color: AppColors.pinkLight.withValues(alpha: opacity),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.glowPink,
-                    blurRadius: 6.r,
-                    spreadRadius: 1.r,
+                    blurRadius: blurRadius,
+                    spreadRadius: spreadRadius,
                   ),
                 ],
               ),
@@ -305,3 +354,4 @@ class _LoadingDotsState extends State<_LoadingDots>
     );
   }
 }
+

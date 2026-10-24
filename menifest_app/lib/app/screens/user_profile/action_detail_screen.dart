@@ -271,15 +271,25 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<ManifestProvider>(
+      builder: (context, provider, _) {
+        if (context.isTablet) {
+          return _buildTabletLayout(context, provider);
+        }
+        return _buildMobileLayout(context, provider);
+      },
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context, ManifestProvider provider) {
     return PopScope(
       canPop: !_mustShowAdOnExit,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _exit();
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFFF8F5FF),
-      body: Consumer<ManifestProvider>(
-        builder: (context, provider, _) => Stack(
+        backgroundColor: const Color(0xFFF8F5FF),
+        body: Stack(
           children: [
             CustomScrollView(
               controller: _scrollController,
@@ -685,7 +695,552 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
           ],
         ),
       ),
-    ),
+    );
+  }
+
+  // ── Tablet Layout ──────────────────────────────────────────────────────────
+  Widget _buildTabletLayout(BuildContext context, ManifestProvider provider) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    return PopScope(
+      canPop: !_mustShowAdOnExit,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _exit();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFFBF8FE),
+                Color(0xFFF3ECFA),
+                Color(0xFFFCF0F5),
+                Color(0xFFF4EDFE),
+              ],
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -60.0,
+                right: -40.0,
+                child: Container(
+                  width: 320.0,
+                  height: 320.0,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.purple.withValues(alpha: 0.10),
+                        AppColors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -40.0,
+                left: -30.0,
+                child: Container(
+                  width: 280.0,
+                  height: 280.0,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.pink.withValues(alpha: 0.08),
+                        AppColors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isLandscape ? 820.0 : 720.0,
+                  ),
+                  child: Container(
+                    height: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 24.0),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(28.0),
+                      border: Border.all(
+                        color: AppColors.purple.withValues(alpha: 0.12),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.purple.withValues(alpha: 0.08),
+                          blurRadius: 32.0,
+                          spreadRadius: 2.0,
+                          offset: const Offset(0, 0),
+                        ),
+                        BoxShadow(
+                          color: AppColors.black.withValues(alpha: 0.03),
+                          blurRadius: 10.0,
+                          offset: const Offset(0, 0),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      children: [
+                        _buildTabletScrollContent(
+                          context,
+                          provider,
+                          isLandscape,
+                        ),
+                        if (_isTransitioning)
+                          Positioned.fill(
+                            child: _StepFanfareOverlay(
+                              animation: _transitionController,
+                              isTablet: true,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabletScrollContent(
+    BuildContext context,
+    ManifestProvider provider,
+    bool isLandscape,
+  ) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTabletHeroBanner(isLandscape),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isLandscape ? 36.0 : 28.0,
+              28.0,
+              isLandscape ? 36.0 : 28.0,
+              36.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTabletAudioCard(provider),
+                const SizedBox(height: 28.0),
+                _buildTabletSummaryStrip(),
+                const SizedBox(height: 28.0),
+                _buildTabletSectionLabel(),
+                const SizedBox(height: 14.0),
+                ..._buildTabletGuidanceSections(
+                  _cardData['task_description'] as String?,
+                ),
+                const SizedBox(height: 32.0),
+                _buildTabletNavRow(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletHeroBanner(bool isLandscape) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -40.0,
+            right: -40.0,
+            child: Container(
+              width: 180.0,
+              height: 180.0,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.white.withValues(alpha: 0.07),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -30.0,
+            left: -30.0,
+            child: Container(
+              width: 130.0,
+              height: 130.0,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.white.withValues(alpha: 0.07),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isLandscape ? 28.0 : 24.0,
+              20.0,
+              isLandscape ? 28.0 : 24.0,
+              28.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: _exit,
+                      child: Container(
+                        width: 40.0,
+                        height: 40.0,
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.22),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.white.withValues(alpha: 0.35),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(right: 2.0),
+                            child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: AppColors.white,
+                              size: 16.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18.0,
+                        vertical: 6.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20.0),
+                        border: Border.all(
+                          color: AppColors.white.withValues(alpha: 0.30),
+                        ),
+                      ),
+                      child: Text(
+                        'STEP ${_cardData['day_number'] ?? (_currentIndex + 1)}',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 11.0,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.5,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: 6.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16.0),
+                        border: Border.all(
+                          color: AppColors.white.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Text(
+                        '${_currentIndex + 1} / ${widget.steps.length}',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 11.0,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20.0),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    _cardData['task_title'] ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 24.0,
+                      fontWeight: FontWeight.w900,
+                      height: 1.25,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletAudioCard(ManifestProvider provider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 22.0),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24.0),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.purple.withValues(alpha: 0.28),
+            blurRadius: 24.0,
+            offset: const Offset(0, 10.0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (_, child) => Transform.scale(
+                  scale: provider.isPlaying ? _pulseAnimation.value : 1.0,
+                  child: child,
+                ),
+                child: GestureDetector(
+                  onTap: () => _toggleAudio(provider),
+                  child: Container(
+                    width: 58.0,
+                    height: 58.0,
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.black.withValues(alpha: 0.12),
+                          blurRadius: 8.0,
+                          offset: const Offset(0, 4.0),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      provider.isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: AppColors.purple,
+                      size: 32.0,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 18.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      provider.isPlaying
+                          ? '✨ Now Playing'
+                          : 'Listen to Guidance',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4.0),
+                    Text(
+                      'Tap to ${provider.isPlaying ? 'stop' : 'hear'} this step read aloud',
+                      style: TextStyle(
+                        color: AppColors.white.withValues(alpha: 0.78),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 6.0,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                child: Text(
+                  _getSpeedLabel(provider.speechRate),
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 12.0,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18.0),
+          Row(
+            children: [
+              _TabletSpeedButton(
+                label: 'Slower',
+                onTap: () => _updateSpeed(provider, -0.15),
+              ),
+              const Spacer(),
+              _TabletSpeedButton(
+                label: 'Faster',
+                onTap: () => _updateSpeed(provider, 0.15),
+                alignRight: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletSummaryStrip() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      decoration: BoxDecoration(
+        color: AppColors.purple.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(
+          color: AppColors.purple.withValues(alpha: 0.10),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.bolt_rounded, color: AppColors.purple, size: 20.0),
+          const SizedBox(width: 12.0),
+          Expanded(
+            child: Text(
+              _cardData['summary'] ?? (widget.plan['summary'] ?? ''),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textDark,
+                fontWeight: FontWeight.w700,
+                height: 1.5,
+                fontSize: 14.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletSectionLabel() {
+    return const Padding(
+      padding: EdgeInsets.only(left: 4.0),
+      child: Text(
+        'YOUR FULL GUIDANCE',
+        style: TextStyle(
+          color: AppColors.purple,
+          fontSize: 12.0,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 2.0,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildTabletGuidanceSections(String? text) {
+    if (text == null || text.trim().isEmpty) {
+      return [
+        const _TabletGuidanceCard(
+          label: 'GUIDANCE',
+          icon: Icons.hourglass_empty_rounded,
+          color: AppColors.textGrey,
+          text:
+              'Guidance for this step is still on its way — try refreshing the plan.',
+        ),
+      ];
+    }
+
+    final paragraphs = _splitIntoParagraphs(text.trim());
+
+    const sectionMeta = [
+      ('THE BIG PICTURE', Icons.visibility_rounded, AppColors.purple),
+      ('WHY IT MATTERS', Icons.psychology_alt_rounded, AppColors.pink),
+      ('HOW TO DO IT', Icons.checklist_rounded, AppColors.blue),
+      ('KEEP IN MIND', Icons.tips_and_updates_rounded, AppColors.purpleLight),
+    ];
+
+    final cards = <Widget>[];
+    for (var i = 0; i < paragraphs.length; i++) {
+      final isLast = i == paragraphs.length - 1;
+      if (isLast && paragraphs.length > 1) {
+        cards.add(_TabletTakeawayCard(text: paragraphs[i]));
+      } else {
+        final meta = sectionMeta[i % sectionMeta.length];
+        cards.add(
+          _TabletGuidanceCard(
+            label: meta.$1,
+            icon: meta.$2,
+            color: meta.$3,
+            text: paragraphs[i],
+          ),
+        );
+      }
+      if (!isLast) cards.add(const SizedBox(height: 16.0));
+    }
+    return cards;
+  }
+
+  Widget _buildTabletNavRow() {
+    return Row(
+      children: [
+        if (_hasPrevious)
+          Expanded(
+            child: _TabletStepNavButton(
+              label: 'Previous',
+              icon: Icons.arrow_back_rounded,
+              filled: false,
+              iconLeading: true,
+              onTap: () => _goToStep(_currentIndex - 1),
+            ),
+          ),
+        if (_hasPrevious) const SizedBox(width: 16.0),
+        Expanded(
+          child: _hasNext
+              ? _TabletStepNavButton(
+                  label: 'Next Step',
+                  icon: Icons.arrow_forward_rounded,
+                  filled: true,
+                  iconLeading: false,
+                  onTap: () => _goToNextWithFanfare(_currentIndex + 1),
+                )
+              : _TabletStepNavButton(
+                  label: 'Done',
+                  icon: Icons.check_rounded,
+                  filled: true,
+                  iconLeading: false,
+                  onTap: _exit,
+                ),
+        ),
+      ],
     );
   }
 }
@@ -696,8 +1251,9 @@ class _ActionDetailScreenState extends State<ActionDetailScreen>
 // instead of an instant content swap.
 class _StepFanfareOverlay extends StatelessWidget {
   final Animation<double> animation;
+  final bool isTablet;
 
-  const _StepFanfareOverlay({required this.animation});
+  const _StepFanfareOverlay({required this.animation, this.isTablet = false});
 
   @override
   Widget build(BuildContext context) {
@@ -739,17 +1295,21 @@ class _StepFanfareOverlay extends StatelessWidget {
                         offset: Offset(0, rise),
                         child: Transform.scale(
                           scale: 0.4 + bounce * 0.8,
-                          child: Text('🚀', style: TextStyle(fontSize: 64.sp)),
+                          child: Text(
+                            '🚀',
+                            style: TextStyle(fontSize: isTablet ? 72.0 : 64.sp),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  20.verticalSpace,
+                  isTablet ? const SizedBox(height: 24.0) : 20.verticalSpace,
                   Text(
                     'Onward! ✨',
                     style: AppTextStyles.headingMedium.copyWith(
                       color: AppColors.purple,
                       fontWeight: FontWeight.w800,
+                      fontSize: isTablet ? 24.0 : null,
                     ),
                   ),
                 ],
@@ -770,8 +1330,234 @@ class _StepFanfareOverlay extends StatelessWidget {
         opacity: (1 - local).clamp(0.0, 1.0),
         child: Text(
           '✦',
-          style: TextStyle(fontSize: 16.sp, color: AppColors.purple),
+          style: TextStyle(
+            fontSize: isTablet ? 18.0 : 16.sp,
+            color: AppColors.purple,
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _TabletSpeedButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final bool alignRight;
+
+  const _TabletSpeedButton({
+    required this.label,
+    required this.onTap,
+    this.alignRight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        decoration: BoxDecoration(
+          color: AppColors.white.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(20.0),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.25)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.white,
+            fontSize: 12.0,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabletStepNavButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool filled;
+  final bool iconLeading;
+  final VoidCallback onTap;
+
+  const _TabletStepNavButton({
+    required this.label,
+    required this.icon,
+    required this.filled,
+    required this.iconLeading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = Icon(
+      icon,
+      size: 18.0,
+      color: filled ? AppColors.white : AppColors.purple,
+    );
+    final textWidget = Text(
+      label,
+      style: TextStyle(
+        color: filled ? AppColors.white : AppColors.purple,
+        fontSize: 15.0,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18.0),
+      child: Container(
+        height: 54.0,
+        decoration: BoxDecoration(
+          gradient: filled
+              ? const LinearGradient(colors: AppColors.primaryGradient)
+              : null,
+          color: filled ? null : AppColors.purple.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(18.0),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: iconLeading
+              ? [iconWidget, const SizedBox(width: 8.0), textWidget]
+              : [textWidget, const SizedBox(width: 8.0), iconWidget],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabletGuidanceCard extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _TabletGuidanceCard({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22.0),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20.0),
+        border: Border(left: BorderSide(color: color, width: 4.5)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 16.0,
+            offset: const Offset(0, 6.0),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7.0),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: Icon(icon, color: color, size: 16.0),
+              ),
+              const SizedBox(width: 10.0),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12.0,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12.0),
+          Text(
+            text,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textDark,
+              height: 1.65,
+              fontSize: 15.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabletTakeawayCard extends StatelessWidget {
+  final String text;
+
+  const _TabletTakeawayCard({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24.0),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20.0),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.purple.withValues(alpha: 0.3),
+            blurRadius: 20.0,
+            offset: const Offset(0, 10.0),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.flag_rounded,
+                color: AppColors.white,
+                size: 18.0,
+              ),
+              const SizedBox(width: 10.0),
+              Text(
+                'TAKE THIS ACTION',
+                style: TextStyle(
+                  color: AppColors.white.withValues(alpha: 0.85),
+                  fontSize: 12.0,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14.0),
+          Text(
+            text,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+              height: 1.6,
+              fontSize: 16.0,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -75,507 +75,1143 @@ class _ProfileScreenState extends State<ProfileScreen> {
             (userProvider.archetypeData?['archetype_name'] as String?) ??
             'Cosmic Visionary';
 
-        return Scaffold(
-          backgroundColor: AppColors.white,
-          bottomNavigationBar: const SafeArea(child: BannerAdWidget()),
-          body: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 340.h,
-                backgroundColor: AppColors.white,
-                surfaceTintColor: AppColors.white,
-                shadowColor: AppColors.purple.withValues(alpha: 0.08),
-                elevation: 0,
-                scrolledUnderElevation: 2,
-                pinned: true,
-                stretch: true,
-                centerTitle: true,
-                title: AnimatedOpacity(
-                  opacity: _showAppBarTitle ? 1 : 0,
-                  duration: const Duration(milliseconds: 180),
-                  child: Text(
-                    'Profile',
-                    style: AppTextStyles.headingSmall.copyWith(
-                      color: AppColors.textDark,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                leadingWidth: 68.w,
-                leading: Padding(
-                  padding: EdgeInsets.only(left: 18.w),
-                  child: Center(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => Navigator.pop(context),
-                        borderRadius: BorderRadius.circular(22.r),
-                        child: Container(
-                          width: 40.r,
-                          height: 40.r,
-                          decoration: BoxDecoration(
-                            color: AppColors.white.withValues(alpha: 0.92),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.borderLight,
-                              width: 1.2.w,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.purple.withValues(alpha: 0.08),
-                                blurRadius: 10.r,
-                                offset: Offset(0, 3.h),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: AppColors.textDark,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                actions: [
-                  Padding(
-                    padding: EdgeInsets.only(right: 18.w),
-                    child: Center(
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            AppRoutes.editProfile,
-                          ),
-                          borderRadius: BorderRadius.circular(22.r),
-                          child: Container(
-                            width: 40.r,
-                            height: 40.r,
-                            decoration: BoxDecoration(
-                              color: AppColors.white.withValues(alpha: 0.92),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.borderLight,
-                                width: 1.2.w,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.purple.withValues(
-                                    alpha: 0.08,
-                                  ),
-                                  blurRadius: 10.r,
-                                  offset: Offset(0, 3.h),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.tune_rounded,
-                              color: AppColors.textDark,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  stretchModes: const [
-                    StretchMode.zoomBackground,
-                    StretchMode.blurBackground,
-                  ],
-                  background: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Smooth cosmic atmospheric background
-                      Positioned.fill(
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFECE4FA), // soft luminous lavender
-                                Color(0xFFFBF4FA), // gentle blush
-                                AppColors.white, // seamless blend into content
-                              ],
-                              stops: [0.0, 0.65, 1.0],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Soft ambient aura glows without harsh banding
-                      Positioned(
-                        top: -30.h,
-                        right: -30.w,
-                        child: Container(
-                          width: 200.r,
-                          height: 200.r,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                AppColors.purpleLight.withValues(alpha: 0.12),
-                                AppColors.transparent,
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 70.h,
-                        left: -40.w,
-                        child: Container(
-                          width: 180.r,
-                          height: 180.r,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                AppColors.pinkLight.withValues(alpha: 0.10),
-                                AppColors.transparent,
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Profile Identity Section
-                      Positioned(
-                        bottom: 10.h,
-                        left: 0,
-                        right: 0,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // ── Big Glowing Avatar with Zoom on Tap ──
-                            GestureDetector(
-                              onTap: () => _showAvatarZoom(
-                                context,
-                                userProvider.profileImage,
-                                userProvider.name,
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Outer soft atmospheric glow
-                                  Container(
-                                    width: 124.r,
-                                    height: 124.r,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.purple.withValues(
-                                            alpha: 0.20,
-                                          ),
-                                          blurRadius: 28.r,
-                                          spreadRadius: 2.r,
-                                          offset: Offset(0, 8.h),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Gradient halo ring (original big size)
-                                  Container(
-                                    width: 124.r,
-                                    height: 124.r,
-                                    padding: EdgeInsets.all(4.r),
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: LinearGradient(
-                                        colors: AppColors.primaryGradient,
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                    ),
-                                    child: Container(
-                                      padding: EdgeInsets.all(3.r),
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: ClipOval(
-                                        child: Image.network(
-                                          userProvider.profileImage,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, _) =>
-                                              Container(
-                                                color: AppColors.surfaceLight,
-                                                child: const Icon(
-                                                  Icons.person_rounded,
-                                                  color: AppColors.purple,
-                                                  size: 54,
-                                                ),
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            14.verticalSpace,
-                            // ── User Name ──
-                            Text(
-                              userProvider.name,
-                              style: AppTextStyles.headingLarge.copyWith(
-                                fontSize: 26.sp,
-                                color: AppColors.textDark,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            8.verticalSpace,
-                            // ── Interactive Spiritual Archetype Badge ──
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => _openArchetype(context),
-                                borderRadius: BorderRadius.circular(24.r),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w,
-                                    vertical: 7.h,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.white.withValues(
-                                      alpha: 0.95,
-                                    ),
-                                    borderRadius: BorderRadius.circular(24.r),
-                                    border: Border.all(
-                                      color: AppColors.purple.withValues(
-                                        alpha: 0.20,
-                                      ),
-                                      width: 1.2.w,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.purple.withValues(
-                                          alpha: 0.08,
-                                        ),
-                                        blurRadius: 14.r,
-                                        offset: Offset(0, 4.h),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ShaderMask(
-                                        shaderCallback: (bounds) =>
-                                            const LinearGradient(
-                                              colors: AppColors.primaryGradient,
-                                            ).createShader(bounds),
-                                        child: Icon(
-                                          Icons.auto_awesome,
-                                          color: AppColors.white,
-                                          size: 14.sp,
-                                        ),
-                                      ),
-                                      8.horizontalSpace,
-                                      Text(
-                                        archetypeName,
-                                        style: AppTextStyles.label.copyWith(
-                                          color: AppColors.purple,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 12.sp,
-                                          letterSpacing: 0.4,
-                                        ),
-                                      ),
-                                      6.horizontalSpace,
-                                      Icon(
-                                        Icons.arrow_forward_ios_rounded,
-                                        color: AppColors.purpleLight,
-                                        size: 10.sp,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+        if (context.isTablet) {
+          return _buildTabletLayout(
+            context,
+            userProvider,
+            manifestProvider,
+            isLoadingInitial,
+            manifestedCount,
+            streakCount,
+            goalsCount,
+            archetypeName,
+          );
+        }
+
+        return _buildPhoneLayout(
+          context,
+          userProvider,
+          manifestProvider,
+          isLoadingInitial,
+          manifestedCount,
+          streakCount,
+          goalsCount,
+          archetypeName,
+        );
+      },
+    );
+  }
+
+  // ── Tablet Layout ──────────────────────────────────────────────────────────
+  Widget _buildTabletLayout(
+    BuildContext context,
+    UserProvider userProvider,
+    ManifestProvider manifestProvider,
+    bool isLoadingInitial,
+    String manifestedCount,
+    String streakCount,
+    String goalsCount,
+    String archetypeName,
+  ) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      resizeToAvoidBottomInset: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFBF8FE),
+              Color(0xFFF3ECFA),
+              Color(0xFFFCF0F5),
+              Color(0xFFF4EDFE),
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -60.0,
+              right: -40.0,
+              child: Container(
+                width: 320.0,
+                height: 320.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.purple.withValues(alpha: 0.10),
+                      AppColors.transparent,
                     ],
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
+            ),
+            Positioned(
+              bottom: -40.0,
+              left: -30.0,
+              child: Container(
+                width: 280.0,
+                height: 280.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.pink.withValues(alpha: 0.08),
+                      AppColors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isLandscape ? 820.0 : 720.0,
+                ),
                 child: Container(
-                  color: AppColors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      10.verticalSpace,
-                      Row(
-                        children: [
-                          _ModernStatCard(
-                            label: 'MANIFESTED',
-                            value: manifestedCount,
-                            isLoading: isLoadingInitial,
-                            icon: Icons.auto_awesome_rounded,
-                            accentColor: AppColors.purple,
-                            bgColor: const Color(0xFFF5EEFF),
-                            borderColor: const Color(0xFFE8D8FF),
-                            gradientColors: const [
-                              Color(0xFF7B2FF7),
-                              Color(0xFFE91E8C),
-                            ],
+                  height: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 24.0),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(28.0),
+                    border: Border.all(
+                      color: AppColors.purple.withValues(alpha: 0.12),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.purple.withValues(alpha: 0.08),
+                        blurRadius: 32.0,
+                        spreadRadius: 2.0,
+                        offset: const Offset(0, 0),
+                      ),
+                      BoxShadow(
+                        color: AppColors.black.withValues(alpha: 0.03),
+                        blurRadius: 10.0,
+                        offset: const Offset(0, 0),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        _buildTabletTopBar(context),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              isLandscape ? 36.0 : 28.0,
+                              24.0,
+                              isLandscape ? 36.0 : 28.0,
+                              32.0,
+                            ),
+                            child: _buildTabletPortraitBody(
+                              context,
+                              userProvider,
+                              manifestProvider,
+                              isLoadingInitial,
+                              manifestedCount,
+                              streakCount,
+                              goalsCount,
+                              archetypeName,
+                            ),
                           ),
-                          12.horizontalSpace,
-                          _ModernStatCard(
-                            label: 'STREAK',
-                            value: streakCount,
-                            isLoading: isLoadingInitial,
-                            icon: Icons.local_fire_department_rounded,
-                            accentColor: const Color(0xFFFF5722),
-                            bgColor: const Color(0xFFFFF2EE),
-                            borderColor: const Color(0xFFFFDED4),
-                            gradientColors: const [
-                              Color(0xFFFF5722),
-                              Color(0xFFFF9800),
-                            ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabletTopBar(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 14.0),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.borderLight.withValues(alpha: 0.6),
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(22.0),
+              child: Container(
+                width: 42.0,
+                height: 42.0,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.borderLight, width: 1.2),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textDark,
+                  size: 16.0,
+                ),
+              ),
+            ),
+          ),
+          Text(
+            'Profile & Account',
+            style: AppTextStyles.headingSmall.copyWith(
+              color: AppColors.textDark,
+              fontSize: 18.0,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => Navigator.pushNamed(context, AppRoutes.editProfile),
+              borderRadius: BorderRadius.circular(22.0),
+              child: Container(
+                width: 42.0,
+                height: 42.0,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.borderLight, width: 1.2),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.textDark,
+                  size: 18.0,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletLandscapeBody(
+    BuildContext context,
+    UserProvider userProvider,
+    ManifestProvider manifestProvider,
+    bool isLoadingInitial,
+    String manifestedCount,
+    String streakCount,
+    String goalsCount,
+    String archetypeName,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTabletIdentityCard(context, userProvider, archetypeName),
+              const SizedBox(height: 20.0),
+              _buildTabletStatsRow(
+                isLoadingInitial: isLoadingInitial,
+                manifestedCount: manifestedCount,
+                streakCount: streakCount,
+                goalsCount: goalsCount,
+              ),
+              const SizedBox(height: 28.0),
+              _buildTabletLogoutSection(context, userProvider),
+            ],
+          ),
+        ),
+        const SizedBox(width: 32.0),
+        Expanded(
+          flex: 6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'PERSONAL DIMENSIONS',
+                style: AppTextStyles.label.copyWith(
+                  color: AppColors.textDark.withValues(alpha: 0.4),
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12.0,
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              _buildTabletMenuTiles(context),
+              const SizedBox(height: 20.0),
+              const NativeAdWidget(templateType: TemplateType.small),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletPortraitBody(
+    BuildContext context,
+    UserProvider userProvider,
+    ManifestProvider manifestProvider,
+    bool isLoadingInitial,
+    String manifestedCount,
+    String streakCount,
+    String goalsCount,
+    String archetypeName,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTabletIdentityCard(context, userProvider, archetypeName),
+        const SizedBox(height: 24.0),
+        _buildTabletStatsRow(
+          isLoadingInitial: isLoadingInitial,
+          manifestedCount: manifestedCount,
+          streakCount: streakCount,
+          goalsCount: goalsCount,
+        ),
+        const SizedBox(height: 32.0),
+        Text(
+          'PERSONAL DIMENSIONS',
+          style: AppTextStyles.label.copyWith(
+            color: AppColors.textDark.withValues(alpha: 0.4),
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+            fontSize: 12.0,
+          ),
+        ),
+        const SizedBox(height: 16.0),
+        _buildTabletMenuTiles(context),
+        const SizedBox(height: 24.0),
+        const NativeAdWidget(templateType: TemplateType.small),
+        const SizedBox(height: 32.0),
+        _buildTabletLogoutSection(context, userProvider),
+        const SizedBox(height: 24.0),
+      ],
+    );
+  }
+
+  Widget _buildTabletIdentityCard(
+    BuildContext context,
+    UserProvider userProvider,
+    String archetypeName,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28.0, horizontal: 24.0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24.0),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFECE4FA), Color(0xFFFBF4FA), AppColors.white],
+          stops: [0.0, 0.7, 1.0],
+        ),
+        border: Border.all(
+          color: AppColors.purpleLight.withValues(alpha: 0.3),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.purple.withValues(alpha: 0.05),
+            blurRadius: 18.0,
+            offset: const Offset(0, 6.0),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => _showAvatarZoom(
+              context,
+              userProvider.profileImage,
+              userProvider.name,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 124.0,
+                  height: 124.0,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.purple.withValues(alpha: 0.22),
+                        blurRadius: 28.0,
+                        spreadRadius: 2.0,
+                        offset: const Offset(0, 8.0),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 124.0,
+                  height: 124.0,
+                  padding: const EdgeInsets.all(4.0),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: AppColors.primaryGradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(3.0),
+                    decoration: const BoxDecoration(
+                      color: AppColors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        userProvider.profileImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, _) => Container(
+                          color: AppColors.surfaceLight,
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: AppColors.purple,
+                            size: 54.0,
                           ),
-                          12.horizontalSpace,
-                          _ModernStatCard(
-                            label: 'GOALS',
-                            value: goalsCount,
-                            isLoading: isLoadingInitial,
-                            icon: Icons.track_changes_rounded,
-                            accentColor: AppColors.blue,
-                            bgColor: const Color(0xFFEEF5FF),
-                            borderColor: const Color(0xFFD6E6FF),
-                            gradientColors: const [
-                              Color(0xFF2979FF),
-                              Color(0xFF00E5FF),
-                            ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16.0),
+          Text(
+            userProvider.name,
+            style: AppTextStyles.headingLarge.copyWith(
+              fontSize: 26.0,
+              color: AppColors.textDark,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 10.0),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _openArchetype(context),
+              borderRadius: BorderRadius.circular(24.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18.0,
+                  vertical: 8.0,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(24.0),
+                  border: Border.all(
+                    color: AppColors.purple.withValues(alpha: 0.22),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.purple.withValues(alpha: 0.08),
+                      blurRadius: 14.0,
+                      offset: const Offset(0, 4.0),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: AppColors.primaryGradient,
+                      ).createShader(bounds),
+                      child: const Icon(
+                        Icons.auto_awesome,
+                        color: AppColors.white,
+                        size: 14.0,
+                      ),
+                    ),
+                    const SizedBox(width: 8.0),
+                    Text(
+                      archetypeName,
+                      style: AppTextStyles.label.copyWith(
+                        color: AppColors.purple,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12.5,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const SizedBox(width: 6.0),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: AppColors.purpleLight,
+                      size: 11.0,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletStatsRow({
+    required bool isLoadingInitial,
+    required String manifestedCount,
+    required String streakCount,
+    required String goalsCount,
+  }) {
+    return Row(
+      children: [
+        _ModernStatCard(
+          label: 'MANIFESTED',
+          value: manifestedCount,
+          isLoading: isLoadingInitial,
+          icon: Icons.auto_awesome_rounded,
+          accentColor: AppColors.purple,
+          bgColor: const Color(0xFFF5EEFF),
+          borderColor: const Color(0xFFE8D8FF),
+          gradientColors: const [Color(0xFF7B2FF7), Color(0xFFE91E8C)],
+        ),
+        const SizedBox(width: 12.0),
+        _ModernStatCard(
+          label: 'STREAK',
+          value: streakCount,
+          isLoading: isLoadingInitial,
+          icon: Icons.local_fire_department_rounded,
+          accentColor: const Color(0xFFFF5722),
+          bgColor: const Color(0xFFFFF2EE),
+          borderColor: const Color(0xFFFFDED4),
+          gradientColors: const [Color(0xFFFF5722), Color(0xFFFF9800)],
+        ),
+        const SizedBox(width: 12.0),
+        _ModernStatCard(
+          label: 'GOALS',
+          value: goalsCount,
+          isLoading: isLoadingInitial,
+          icon: Icons.track_changes_rounded,
+          accentColor: AppColors.blue,
+          bgColor: const Color(0xFFEEF5FF),
+          borderColor: const Color(0xFFD6E6FF),
+          gradientColors: const [Color(0xFF2979FF), Color(0xFF00E5FF)],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletMenuTiles(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _MenuTile(
+          label: 'Edit Your Answers',
+          subtitle: 'Update what you shared about yourself, family & career',
+          icon: Icons.quiz_rounded,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const ProfileSetupScreen(isEditing: true),
+            ),
+          ),
+        ),
+        _MenuTile(
+          label: 'Spiritual Archetype',
+          subtitle: 'Your manifestation DNA and patterns',
+          icon: Icons.psychology_rounded,
+          onTap: () => _openArchetype(context),
+        ),
+        _MenuTile(
+          label: 'Vision Board',
+          subtitle: 'Active dream manifestations',
+          icon: Icons.auto_graph_rounded,
+          onTap: () => AdGate.run(
+            context,
+            key: 'vision_board',
+            title: 'Support Manifest',
+            message:
+                'Watch a short ad to support Manifest. You won\'t be asked again for 24 hours.',
+            interstitialStyle: true,
+            blocking: false,
+            onUnlocked: () =>
+                Navigator.pushNamed(context, AppRoutes.visionBoard),
+          ),
+        ),
+        _MenuTile(
+          label: 'Privacy Settings',
+          subtitle: 'Data protection and sphere visibility',
+          icon: Icons.security_rounded,
+          onTap: () => Navigator.pushNamed(context, AppRoutes.privacySettings),
+        ),
+        _MenuTile(
+          label: 'App Notifications',
+          subtitle: 'Manage push notifications and updates',
+          icon: Icons.notifications_active_rounded,
+          onTap: () =>
+              Navigator.pushNamed(context, AppRoutes.notificationSettings),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletLogoutSection(
+    BuildContext context,
+    UserProvider userProvider,
+  ) {
+    return Center(
+      child: Column(
+        children: [
+          TextButton.icon(
+            onPressed: () async {
+              context.read<ManifestProvider>().resetForLogout();
+              await userProvider.logout();
+              if (!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.welcome,
+                (route) => false,
+              );
+            },
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: AppColors.pink,
+              size: 20.0,
+            ),
+            label: Text(
+              'DEACTIVATE CONNECTION',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.pink,
+                fontWeight: FontWeight.w900,
+                fontSize: 13.0,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12.0),
+          Text(
+            'Version 2.4.0 (AI Enhanced)',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textLightGrey,
+              fontSize: 12.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Phone Layout (Preserved 100% Unchanged) ──────────────────────────────
+  Widget _buildPhoneLayout(
+    BuildContext context,
+    UserProvider userProvider,
+    ManifestProvider manifestProvider,
+    bool isLoadingInitial,
+    String manifestedCount,
+    String streakCount,
+    String goalsCount,
+    String archetypeName,
+  ) {
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      bottomNavigationBar: const SafeArea(child: BannerAdWidget()),
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 340.h,
+            backgroundColor: AppColors.white,
+            surfaceTintColor: AppColors.white,
+            shadowColor: AppColors.purple.withValues(alpha: 0.08),
+            elevation: 0,
+            scrolledUnderElevation: 2,
+            pinned: true,
+            stretch: true,
+            centerTitle: true,
+            title: AnimatedOpacity(
+              opacity: _showAppBarTitle ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: Text(
+                'Profile',
+                style: AppTextStyles.headingSmall.copyWith(
+                  color: AppColors.textDark,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            leadingWidth: 68.w,
+            leading: Padding(
+              padding: EdgeInsets.only(left: 18.w),
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(22.r),
+                    child: Container(
+                      width: 40.r,
+                      height: 40.r,
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.92),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.borderLight,
+                          width: 1.2.w,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.purple.withValues(alpha: 0.08),
+                            blurRadius: 10.r,
+                            offset: Offset(0, 3.h),
                           ),
                         ],
                       ),
-                      36.verticalSpace,
-                      Text(
-                        'PERSONAL DIMENSIONS',
-                        style: AppTextStyles.label.copyWith(
-                          color: AppColors.textDark.withValues(alpha: 0.4),
-                          letterSpacing: 2,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12.sp,
-                        ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: AppColors.textDark,
+                        size: 16,
                       ),
-                      20.verticalSpace,
-                      _MenuTile(
-                        label: 'Edit Your Answers',
-                        subtitle:
-                            'Update what you shared about yourself, family & career',
-                        icon: Icons.quiz_rounded,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const ProfileSetupScreen(isEditing: true),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              Padding(
+                padding: EdgeInsets.only(right: 18.w),
+                child: Center(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () =>
+                          Navigator.pushNamed(context, AppRoutes.editProfile),
+                      borderRadius: BorderRadius.circular(22.r),
+                      child: Container(
+                        width: 40.r,
+                        height: 40.r,
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.92),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.borderLight,
+                            width: 1.2.w,
                           ),
-                        ),
-                      ),
-                      _MenuTile(
-                        label: 'Spiritual Archetype',
-                        subtitle: 'Your manifestation DNA and patterns',
-                        icon: Icons.psychology_rounded,
-                        onTap: () => _openArchetype(context),
-                      ),
-                      _MenuTile(
-                        label: 'Vision Board',
-                        subtitle: 'Active dream manifestations',
-                        icon: Icons.auto_graph_rounded,
-                        onTap: () => AdGate.run(
-                          context,
-                          key: 'vision_board',
-                          title: 'Support Manifest',
-                          message:
-                              'Watch a short ad to support Manifest. You won\'t be asked again for 24 hours.',
-                          interstitialStyle: true,
-                          blocking: false,
-                          onUnlocked: () => Navigator.pushNamed(
-                            context,
-                            AppRoutes.visionBoard,
-                          ),
-                        ),
-                      ),
-                      _MenuTile(
-                        label: 'Privacy Settings',
-                        subtitle: 'Data protection and sphere visibility',
-                        icon: Icons.security_rounded,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.privacySettings,
-                        ),
-                      ),
-                      _MenuTile(
-                        label: 'App Notifications',
-                        subtitle: 'Manage push notifications and updates',
-                        icon: Icons.notifications_active_rounded,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.notificationSettings,
-                        ),
-                      ),
-                      32.verticalSpace,
-                      const NativeAdWidget(templateType: TemplateType.small),
-                      48.verticalSpace,
-                      Center(
-                        child: Column(
-                          children: [
-                            TextButton.icon(
-                              onPressed: () async {
-                                context
-                                    .read<ManifestProvider>()
-                                    .resetForLogout();
-                                await userProvider.logout();
-                                if (!context.mounted) return;
-                                Navigator.pushNamedAndRemoveUntil(
-                                  context,
-                                  AppRoutes.welcome,
-                                  (route) => false,
-                                );
-                              },
-                              icon: const Icon(
-                                Icons.logout_rounded,
-                                color: AppColors.pink,
-                              ),
-                              label: Text(
-                                'DEACTIVATE CONNECTION',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.pink,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 12.sp,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ),
-                            20.verticalSpace,
-                            Text(
-                              'Version 2.4.0 (AI Enhanced)',
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textLightGrey,
-                              ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.purple.withValues(alpha: 0.08),
+                              blurRadius: 10.r,
+                              offset: Offset(0, 3.h),
                             ),
                           ],
                         ),
+                        child: const Icon(
+                          Icons.tune_rounded,
+                          color: AppColors.textDark,
+                          size: 18,
+                        ),
                       ),
-                      100.verticalSpace,
-                    ],
+                    ),
                   ),
                 ),
               ),
             ],
+            flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [
+                StretchMode.zoomBackground,
+                StretchMode.blurBackground,
+              ],
+              background: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Smooth cosmic atmospheric background
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFECE4FA), // soft luminous lavender
+                            Color(0xFFFBF4FA), // gentle blush
+                            AppColors.white, // seamless blend into content
+                          ],
+                          stops: [0.0, 0.65, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Soft ambient aura glows without harsh banding
+                  Positioned(
+                    top: -30.h,
+                    right: -30.w,
+                    child: Container(
+                      width: 200.r,
+                      height: 200.r,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.purpleLight.withValues(alpha: 0.12),
+                            AppColors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 70.h,
+                    left: -40.w,
+                    child: Container(
+                      width: 180.r,
+                      height: 180.r,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.pinkLight.withValues(alpha: 0.10),
+                            AppColors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Profile Identity Section
+                  Positioned(
+                    bottom: 10.h,
+                    left: 0,
+                    right: 0,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // ── Big Glowing Avatar with Zoom on Tap ──
+                        GestureDetector(
+                          onTap: () => _showAvatarZoom(
+                            context,
+                            userProvider.profileImage,
+                            userProvider.name,
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Outer soft atmospheric glow
+                              Container(
+                                width: 124.r,
+                                height: 124.r,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.purple.withValues(
+                                        alpha: 0.20,
+                                      ),
+                                      blurRadius: 28.r,
+                                      spreadRadius: 2.r,
+                                      offset: Offset(0, 8.h),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Gradient halo ring (original big size)
+                              Container(
+                                width: 124.r,
+                                height: 124.r,
+                                padding: EdgeInsets.all(4.r),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: AppColors.primaryGradient,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                                child: Container(
+                                  padding: EdgeInsets.all(3.r),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.network(
+                                      userProvider.profileImage,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, _) =>
+                                          Container(
+                                            color: AppColors.surfaceLight,
+                                            child: const Icon(
+                                              Icons.person_rounded,
+                                              color: AppColors.purple,
+                                              size: 54,
+                                            ),
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        14.verticalSpace,
+                        // ── User Name ──
+                        Text(
+                          userProvider.name,
+                          style: AppTextStyles.headingLarge.copyWith(
+                            fontSize: 26.sp,
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        8.verticalSpace,
+                        // ── Interactive Spiritual Archetype Badge ──
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _openArchetype(context),
+                            borderRadius: BorderRadius.circular(24.r),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 7.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.white.withValues(alpha: 0.95),
+                                borderRadius: BorderRadius.circular(24.r),
+                                border: Border.all(
+                                  color: AppColors.purple.withValues(
+                                    alpha: 0.20,
+                                  ),
+                                  width: 1.2.w,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.purple.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                    blurRadius: 14.r,
+                                    offset: Offset(0, 4.h),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ShaderMask(
+                                    shaderCallback: (bounds) =>
+                                        const LinearGradient(
+                                          colors: AppColors.primaryGradient,
+                                        ).createShader(bounds),
+                                    child: Icon(
+                                      Icons.auto_awesome,
+                                      color: AppColors.white,
+                                      size: 14.sp,
+                                    ),
+                                  ),
+                                  8.horizontalSpace,
+                                  Text(
+                                    archetypeName,
+                                    style: AppTextStyles.label.copyWith(
+                                      color: AppColors.purple,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12.sp,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                  6.horizontalSpace,
+                                  Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    color: AppColors.purpleLight,
+                                    size: 10.sp,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        );
-      },
+          SliverToBoxAdapter(
+            child: Container(
+              color: AppColors.white,
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  10.verticalSpace,
+                  Row(
+                    children: [
+                      _ModernStatCard(
+                        label: 'MANIFESTED',
+                        value: manifestedCount,
+                        isLoading: isLoadingInitial,
+                        icon: Icons.auto_awesome_rounded,
+                        accentColor: AppColors.purple,
+                        bgColor: const Color(0xFFF5EEFF),
+                        borderColor: const Color(0xFFE8D8FF),
+                        gradientColors: const [
+                          Color(0xFF7B2FF7),
+                          Color(0xFFE91E8C),
+                        ],
+                      ),
+                      12.horizontalSpace,
+                      _ModernStatCard(
+                        label: 'STREAK',
+                        value: streakCount,
+                        isLoading: isLoadingInitial,
+                        icon: Icons.local_fire_department_rounded,
+                        accentColor: const Color(0xFFFF5722),
+                        bgColor: const Color(0xFFFFF2EE),
+                        borderColor: const Color(0xFFFFDED4),
+                        gradientColors: const [
+                          Color(0xFFFF5722),
+                          Color(0xFFFF9800),
+                        ],
+                      ),
+                      12.horizontalSpace,
+                      _ModernStatCard(
+                        label: 'GOALS',
+                        value: goalsCount,
+                        isLoading: isLoadingInitial,
+                        icon: Icons.track_changes_rounded,
+                        accentColor: AppColors.blue,
+                        bgColor: const Color(0xFFEEF5FF),
+                        borderColor: const Color(0xFFD6E6FF),
+                        gradientColors: const [
+                          Color(0xFF2979FF),
+                          Color(0xFF00E5FF),
+                        ],
+                      ),
+                    ],
+                  ),
+                  36.verticalSpace,
+                  Text(
+                    'PERSONAL DIMENSIONS',
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.textDark.withValues(alpha: 0.4),
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                  20.verticalSpace,
+                  _MenuTile(
+                    label: 'Edit Your Answers',
+                    subtitle:
+                        'Update what you shared about yourself, family & career',
+                    icon: Icons.quiz_rounded,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const ProfileSetupScreen(isEditing: true),
+                      ),
+                    ),
+                  ),
+                  _MenuTile(
+                    label: 'Spiritual Archetype',
+                    subtitle: 'Your manifestation DNA and patterns',
+                    icon: Icons.psychology_rounded,
+                    onTap: () => _openArchetype(context),
+                  ),
+                  _MenuTile(
+                    label: 'Vision Board',
+                    subtitle: 'Active dream manifestations',
+                    icon: Icons.auto_graph_rounded,
+                    onTap: () => AdGate.run(
+                      context,
+                      key: 'vision_board',
+                      title: 'Support Manifest',
+                      message:
+                          'Watch a short ad to support Manifest. You won\'t be asked again for 24 hours.',
+                      interstitialStyle: true,
+                      blocking: false,
+                      onUnlocked: () =>
+                          Navigator.pushNamed(context, AppRoutes.visionBoard),
+                    ),
+                  ),
+                  _MenuTile(
+                    label: 'Privacy Settings',
+                    subtitle: 'Data protection and sphere visibility',
+                    icon: Icons.security_rounded,
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.privacySettings),
+                  ),
+                  _MenuTile(
+                    label: 'App Notifications',
+                    subtitle: 'Manage push notifications and updates',
+                    icon: Icons.notifications_active_rounded,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.notificationSettings,
+                    ),
+                  ),
+                  32.verticalSpace,
+                  const NativeAdWidget(templateType: TemplateType.small),
+                  48.verticalSpace,
+                  Center(
+                    child: Column(
+                      children: [
+                        TextButton.icon(
+                          onPressed: () async {
+                            context.read<ManifestProvider>().resetForLogout();
+                            await userProvider.logout();
+                            if (!context.mounted) return;
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              AppRoutes.welcome,
+                              (route) => false,
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: AppColors.pink,
+                          ),
+                          label: Text(
+                            'DEACTIVATE CONNECTION',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.pink,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12.sp,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                        20.verticalSpace,
+                        Text(
+                          'Version 2.4.0 (AI Enhanced)',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textLightGrey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  100.verticalSpace,
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -603,18 +1239,21 @@ class _ModernStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = context.isTablet;
     return Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
+        padding: isTablet
+            ? const EdgeInsets.symmetric(vertical: 16.0, horizontal: 10.0)
+            : EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: borderColor, width: 1.2.w),
+          borderRadius: BorderRadius.circular(isTablet ? 18.0 : 20.r),
+          border: Border.all(color: borderColor, width: isTablet ? 1.2 : 1.2.w),
           boxShadow: [
             BoxShadow(
               color: accentColor.withValues(alpha: 0.08),
-              blurRadius: 10.r,
-              offset: Offset(0, 4.h),
+              blurRadius: isTablet ? 10.0 : 10.r,
+              offset: Offset(0, isTablet ? 3.0 : 4.h),
             ),
           ],
         ),
@@ -622,24 +1261,28 @@ class _ModernStatCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 36.r,
-              height: 36.r,
+              width: isTablet ? 38.0 : 36.r,
+              height: isTablet ? 38.0 : 36.r,
               decoration: BoxDecoration(
                 color: AppColors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: accentColor.withValues(alpha: 0.16),
-                    blurRadius: 6.r,
-                    offset: Offset(0, 2.h),
+                    blurRadius: isTablet ? 6.0 : 6.r,
+                    offset: Offset(0, isTablet ? 2.0 : 2.h),
                   ),
                 ],
               ),
-              child: Icon(icon, color: accentColor, size: 19.sp),
+              child: Icon(
+                icon,
+                color: accentColor,
+                size: isTablet ? 20.0 : 19.sp,
+              ),
             ),
-            10.verticalSpace,
+            isTablet ? const SizedBox(height: 10.0) : 10.verticalSpace,
             SizedBox(
-              height: 28.h,
+              height: isTablet ? 28.0 : 28.h,
               child: Center(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
@@ -662,7 +1305,7 @@ class _ModernStatCard extends StatelessWidget {
                           value,
                           key: ValueKey<String>(value),
                           style: TextStyle(
-                            fontSize: 24.sp,
+                            fontSize: isTablet ? 24.0 : 24.sp,
                             fontWeight: FontWeight.w900,
                             color: AppColors.textDark,
                             letterSpacing: -0.5,
@@ -672,11 +1315,11 @@ class _ModernStatCard extends StatelessWidget {
                 ),
               ),
             ),
-            4.verticalSpace,
+            isTablet ? const SizedBox(height: 4.0) : 4.verticalSpace,
             Text(
               label,
               style: TextStyle(
-                fontSize: 9.5.sp,
+                fontSize: isTablet ? 10.0 : 9.5.sp,
                 fontWeight: FontWeight.w800,
                 color: accentColor,
                 letterSpacing: 0.8,
@@ -788,48 +1431,58 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = context.isTablet;
     return Padding(
-      padding: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.only(bottom: isTablet ? 12.0 : 12.h),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18.r),
+          borderRadius: BorderRadius.circular(isTablet ? 18.0 : 18.r),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            padding: isTablet
+                ? const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0)
+                : EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius: BorderRadius.circular(18.r),
-              border: Border.all(color: AppColors.borderLight, width: 1.w),
+              borderRadius: BorderRadius.circular(isTablet ? 18.0 : 18.r),
+              border: Border.all(
+                color: AppColors.borderLight,
+                width: isTablet ? 1.0 : 1.w,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.purple.withValues(alpha: 0.03),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 3.h),
+                  blurRadius: isTablet ? 10.0 : 10.r,
+                  offset: Offset(0, isTablet ? 3.0 : 3.h),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 44.r,
-                  height: 44.r,
+                  width: isTablet ? 44.0 : 44.r,
+                  height: isTablet ? 44.0 : 44.r,
                   decoration: BoxDecoration(
                     color: AppColors.surfaceLight,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: AppColors.borderLight,
-                      width: 1.w,
+                      width: isTablet ? 1.0 : 1.w,
                     ),
                   ),
                   child: ShaderMask(
                     shaderCallback: (bounds) => const LinearGradient(
                       colors: AppColors.primaryGradient,
                     ).createShader(bounds),
-                    child: Icon(icon, color: AppColors.white, size: 22.sp),
+                    child: Icon(
+                      icon,
+                      color: AppColors.white,
+                      size: isTablet ? 22.0 : 22.sp,
+                    ),
                   ),
                 ),
-                16.horizontalSpace,
+                isTablet ? const SizedBox(width: 16.0) : 16.horizontalSpace,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,23 +1492,23 @@ class _MenuTile extends StatelessWidget {
                         style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textDark,
                           fontWeight: FontWeight.w700,
-                          fontSize: 15.sp,
+                          fontSize: isTablet ? 15.0 : 15.sp,
                         ),
                       ),
-                      3.verticalSpace,
+                      isTablet ? const SizedBox(height: 3.0) : 3.verticalSpace,
                       Text(
                         subtitle,
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textGrey,
-                          fontSize: 12.sp,
+                          fontSize: isTablet ? 12.0 : 12.sp,
                         ),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  width: 28.r,
-                  height: 28.r,
+                  width: isTablet ? 28.0 : 28.r,
+                  height: isTablet ? 28.0 : 28.r,
                   decoration: const BoxDecoration(
                     color: AppColors.surfaceLight,
                     shape: BoxShape.circle,
@@ -863,7 +1516,7 @@ class _MenuTile extends StatelessWidget {
                   child: Icon(
                     Icons.chevron_right_rounded,
                     color: AppColors.textLightGrey,
-                    size: 18.sp,
+                    size: isTablet ? 18.0 : 18.sp,
                   ),
                 ),
               ],
@@ -877,6 +1530,7 @@ class _MenuTile extends StatelessWidget {
 
 void _showAvatarZoom(BuildContext context, String imageUrl, String name) {
   HapticFeedback.lightImpact();
+  final isTablet = context.isTablet;
   showGeneralDialog(
     context: context,
     barrierDismissible: true,
@@ -913,25 +1567,25 @@ void _showAvatarZoom(BuildContext context, String imageUrl, String name) {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 260.r,
-                        height: 260.r,
+                        width: isTablet ? 280.0 : 260.r,
+                        height: isTablet ? 280.0 : 260.r,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.purple.withValues(alpha: 0.45),
-                              blurRadius: 40.r,
-                              spreadRadius: 6.r,
+                              blurRadius: isTablet ? 40.0 : 40.r,
+                              spreadRadius: isTablet ? 6.0 : 6.r,
                             ),
                             BoxShadow(
                               color: AppColors.pink.withValues(alpha: 0.35),
-                              blurRadius: 60.r,
-                              spreadRadius: 2.r,
+                              blurRadius: isTablet ? 60.0 : 60.r,
+                              spreadRadius: isTablet ? 2.0 : 2.r,
                             ),
                           ],
                         ),
                         child: Container(
-                          padding: EdgeInsets.all(5.r),
+                          padding: EdgeInsets.all(isTablet ? 5.0 : 5.r),
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
@@ -941,7 +1595,7 @@ void _showAvatarZoom(BuildContext context, String imageUrl, String name) {
                             ),
                           ),
                           child: Container(
-                            padding: EdgeInsets.all(4.r),
+                            padding: EdgeInsets.all(isTablet ? 4.0 : 4.r),
                             decoration: const BoxDecoration(
                               color: AppColors.white,
                               shape: BoxShape.circle,
@@ -955,7 +1609,7 @@ void _showAvatarZoom(BuildContext context, String imageUrl, String name) {
                                   child: Icon(
                                     Icons.person_rounded,
                                     color: AppColors.purple,
-                                    size: 110.sp,
+                                    size: isTablet ? 110.0 : 110.sp,
                                   ),
                                 ),
                               ),
@@ -963,12 +1617,14 @@ void _showAvatarZoom(BuildContext context, String imageUrl, String name) {
                           ),
                         ),
                       ),
-                      20.verticalSpace,
+                      isTablet
+                          ? const SizedBox(height: 20.0)
+                          : 20.verticalSpace,
                       Text(
                         name,
                         style: AppTextStyles.headingLarge.copyWith(
                           color: AppColors.white,
-                          fontSize: 24.sp,
+                          fontSize: isTablet ? 26.0 : 24.sp,
                           fontWeight: FontWeight.w800,
                           shadows: [
                             Shadow(

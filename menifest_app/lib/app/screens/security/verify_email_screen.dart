@@ -34,13 +34,16 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   void _toast(String message) {
     if (!mounted) return;
+    final isTablet = context.isTablet;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.textDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-        margin: EdgeInsets.all(16.r),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
+        ),
+        margin: EdgeInsets.all(isTablet ? 16.0 : 16.r),
       ),
     );
   }
@@ -144,6 +147,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (context.isTablet) {
+      return _buildTabletLayout(context);
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surfaceVeryLight,
       body: Stack(
@@ -296,6 +303,248 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabletLayout(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFBF8FE),
+              Color(0xFFF3ECFA),
+              Color(0xFFFCF0F5),
+              Color(0xFFF4EDFE),
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -60.0,
+              right: -40.0,
+              child: Container(
+                width: 320.0,
+                height: 320.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.purple.withValues(alpha: 0.10),
+                      AppColors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -40.0,
+              left: -30.0,
+              child: Container(
+                width: 280.0,
+                height: 280.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.pink.withValues(alpha: 0.08),
+                      AppColors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 580.0),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 24.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(28.0),
+                      border: Border.all(
+                        color: AppColors.purple.withValues(alpha: 0.12),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.purple.withValues(alpha: 0.08),
+                          blurRadius: 32.0,
+                          spreadRadius: 2.0,
+                          offset: const Offset(0, 8.0),
+                        ),
+                        BoxShadow(
+                          color: AppColors.black.withValues(alpha: 0.03),
+                          blurRadius: 10.0,
+                          offset: const Offset(0, 2.0),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(36.0, 24.0, 36.0, 32.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!widget.finishesSignup)
+                            Align(
+                              alignment: Alignment.topLeft,
+                              child: GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: Container(
+                                  width: 38.0,
+                                  height: 38.0,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.white,
+                                    border: Border.all(
+                                      color: AppColors.borderFaded,
+                                      width: 1.5,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.black.withValues(
+                                          alpha: 0.04,
+                                        ),
+                                        blurRadius: 8.0,
+                                        offset: const Offset(0, 2.0),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    color: AppColors.textDark,
+                                    size: 20.0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 8.0),
+                          Container(
+                            width: 90.0,
+                            height: 90.0,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: AppColors.primaryGradient,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.glowPurple.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                  blurRadius: 24.0,
+                                  spreadRadius: 2.0,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.mark_email_unread_rounded,
+                              size: 42.0,
+                              color: AppColors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 28.0),
+                          Text(
+                            'Verify Your Email',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.headingLarge.copyWith(
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 26.0,
+                            ),
+                          ),
+                          const SizedBox(height: 12.0),
+                          Text(
+                            "We sent a verification link to",
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textGrey,
+                              height: 1.5,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6.0),
+                          Text(
+                            widget.email,
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.purple,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16.0,
+                            ),
+                          ),
+                          const SizedBox(height: 12.0),
+                          Text(
+                            'Tap the link in that email, then come back here and tap Continue.',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textGrey,
+                              height: 1.5,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                          const SizedBox(height: 32.0),
+                          SolidButton(
+                            label: "I've Verified — Continue",
+                            onPressed: _checkVerified,
+                            isLoading: _checking,
+                          ),
+                          const SizedBox(height: 16.0),
+                          TextButton(
+                            onPressed: _resending ? null : _resend,
+                            child: _resending
+                                ? const SizedBox(
+                                    width: 18.0,
+                                    height: 18.0,
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.purple,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'Resend Email',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: AppColors.purple,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14.5,
+                                    ),
+                                  ),
+                          ),
+                          if (widget.finishesSignup) ...[
+                            const SizedBox(height: 8.0),
+                            TextButton(
+                              onPressed: () => _startOver(context),
+                              child: Text(
+                                'Wrong email? Start over',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.textGrey,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

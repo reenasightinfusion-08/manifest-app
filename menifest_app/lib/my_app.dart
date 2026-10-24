@@ -15,7 +15,6 @@ import 'app/screens/user_profile/vision_board_screen.dart';
 import 'app/screens/user_profile/spiritual_archetype_screen.dart';
 import 'app/screens/user_profile/privacy_settings_screen.dart';
 import 'app/screens/user_profile/notification_settings_screen.dart';
-
 import 'package:provider/provider.dart';
 import 'app/services/onboarding_provider.dart';
 import 'app/services/splash_provider.dart';
@@ -48,7 +47,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // Global so the lifecycle callback (which has no BuildContext of its own)
   // can reach the Navigator and, through it, the providers above it. Shared
   // with NotificationService so a notification tap can navigate too.
-  GlobalKey<NavigatorState> get _navigatorKey => NotificationService.navigatorKey;
+  GlobalKey<NavigatorState> get _navigatorKey =>
+      NotificationService.navigatorKey;
 
   // Set true the moment the app is backgrounded; consumed the moment it's
   // foregrounded again. This is what makes the lock re-trigger on every
@@ -192,7 +192,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         // Only re-lock once the app has actually been away for a while —
         // a quick switch to a notification or the share sheet shouldn't
         // bounce the user back to the passcode screen.
-        final awayLongEnough = pausedAt == null ||
+        final awayLongEnough =
+            pausedAt == null ||
             DateTime.now().difference(pausedAt) >= _autoLockAfter;
         if (awayLongEnough) {
           _lock();
@@ -244,8 +245,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 AppRoutes.visionBoard: (_) => const VisionBoardScreen(),
                 AppRoutes.spiritualArchetype: (_) =>
                     const SpiritualArchetypeScreen(),
-                AppRoutes.privacySettings: (_) =>
-                    const PrivacySettingsScreen(),
+                AppRoutes.privacySettings: (_) => const PrivacySettingsScreen(),
                 AppRoutes.notificationSettings: (_) =>
                     const NotificationSettingsScreen(),
               },

@@ -218,6 +218,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
         final bool saveDisabled =
             widget.isEditing && isLast && !_hasUnsavedChanges(provider);
 
+        if (context.isTablet) {
+          return _buildTabletLayout(context, provider, isLast, saveDisabled);
+        }
+
         return Scaffold(
           backgroundColor: AppColors.white,
           resizeToAvoidBottomInset: true,
@@ -261,17 +265,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                 child: Column(
                   children: [
                     Padding(
-                      padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0),
+                      padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 0),
                       child: Row(
                         children: [
-                          AnimatedOpacity(
-                            duration: const Duration(milliseconds: 300),
-                            opacity: provider.onboardingStep > 0 ? 1.0 : 0.0,
-                            child: GestureDetector(
+                          if (provider.onboardingStep > 0)
+                            GestureDetector(
                               onTap: () => _back(provider),
                               child: Container(
-                                width: 44.w,
-                                height: 44.h,
+                                width: 40.w,
+                                height: 40.w,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: AppColors.white,
@@ -296,7 +298,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                                 ),
                               ),
                             ),
-                          ),
                           const Spacer(),
                           GestureDetector(
                             onTap: () => _finish(context),
@@ -316,10 +317,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                               ),
                             ),
                           ),
-                          10.horizontalSpace,
+                          8.horizontalSpace,
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: 14.w,
+                              horizontal: 12.w,
                               vertical: 6.h,
                             ),
                             decoration: BoxDecoration(
@@ -335,7 +336,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                               style: AppTextStyles.label.copyWith(
                                 color: AppColors.purple,
                                 fontWeight: FontWeight.w700,
-                                fontSize: 12.sp,
+                                fontSize: 11.5.sp,
                               ),
                             ),
                           ),
@@ -457,6 +458,314 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildTabletLayout(
+    BuildContext context,
+    UserProvider provider,
+    bool isLast,
+    bool saveDisabled,
+  ) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: true,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFBF8FE),
+              Color(0xFFF3ECFA),
+              Color(0xFFFCF0F5),
+              Color(0xFFF4EDFE),
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -60.0,
+              right: -40.0,
+              child: Container(
+                width: 320.0,
+                height: 320.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.purple.withValues(alpha: 0.10),
+                      AppColors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -40.0,
+              left: -30.0,
+              child: Container(
+                width: 280.0,
+                height: 280.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.pink.withValues(alpha: 0.08),
+                      AppColors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 920.0),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 20.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(28.0),
+                      border: Border.all(
+                        color: AppColors.purple.withValues(alpha: 0.12),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.purple.withValues(alpha: 0.08),
+                          blurRadius: 32.0,
+                          spreadRadius: 2.0,
+                          offset: const Offset(0, 8.0),
+                        ),
+                        BoxShadow(
+                          color: AppColors.black.withValues(alpha: 0.03),
+                          blurRadius: 10.0,
+                          offset: const Offset(0, 2.0),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            40.0,
+                            24.0,
+                            40.0,
+                            0,
+                          ),
+                          child: Row(
+                            children: [
+                              AnimatedOpacity(
+                                duration: const Duration(milliseconds: 300),
+                                opacity: provider.onboardingStep > 0
+                                    ? 1.0
+                                    : 0.0,
+                                child: GestureDetector(
+                                  onTap: () => _back(provider),
+                                  child: Container(
+                                    width: 42.0,
+                                    height: 42.0,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppColors.white,
+                                      border: Border.all(
+                                        color: AppColors.borderFaded,
+                                        width: 1.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.black.withValues(
+                                            alpha: 0.04,
+                                          ),
+                                          blurRadius: 8.0,
+                                          offset: const Offset(0, 2.0),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_back_rounded,
+                                      color: AppColors.textDark,
+                                      size: 20.0,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () => _finish(context),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
+                                    horizontal: 6.0,
+                                  ),
+                                  child: Text(
+                                    widget.isEditing
+                                        ? 'CANCEL'
+                                        : 'SKIP FOR NOW',
+                                    style: AppTextStyles.label.copyWith(
+                                      color: AppColors.textGrey,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1,
+                                      fontSize: 12.0,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12.0),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 7.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.borderVeryLight,
+                                  borderRadius: BorderRadius.circular(20.0),
+                                  border: Border.all(
+                                    color: AppColors.borderFaded,
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: Text(
+                                  'Step ${provider.onboardingStep + 1} of 3',
+                                  style: AppTextStyles.label.copyWith(
+                                    color: AppColors.purple,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40.0,
+                            vertical: 18.0,
+                          ),
+                          child: Row(
+                            children: List.generate(3, (i) {
+                              return Expanded(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 400),
+                                  margin: EdgeInsets.only(
+                                    right: i < 2 ? 8.0 : 0,
+                                  ),
+                                  height: 4.0,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(2.0),
+                                    gradient: i <= provider.onboardingStep
+                                        ? const LinearGradient(
+                                            colors: AppColors.primaryGradient,
+                                          )
+                                        : null,
+                                    color: i > provider.onboardingStep
+                                        ? AppColors.stepDotInactive
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        Expanded(
+                          child: PageView.builder(
+                            controller: _pageController,
+                            onPageChanged: (idx) =>
+                                _onPageChanged(context, idx),
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: 3,
+                            itemBuilder: (context, index) {
+                              return _QuestionPage(
+                                key: ValueKey('question_page_$index'),
+                                fadeAnim: _fadeAnim,
+                                page: _pages[index],
+                                answers: provider.getAnswersFor(index),
+                                onChanged: (qIndex, val) {
+                                  provider.updateAnswer(index, qIndex, val);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            40.0,
+                            10.0,
+                            40.0,
+                            24.0,
+                          ),
+                          child: GestureDetector(
+                            onTap: saveDisabled
+                                ? null
+                                : () => _next(context, provider),
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: saveDisabled ? 0.45 : 1.0,
+                              child: Container(
+                                width: double.infinity,
+                                height: 56.0,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: AppColors.primaryGradient,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(18.0),
+                                  boxShadow: saveDisabled
+                                      ? const []
+                                      : [
+                                          BoxShadow(
+                                            color: AppColors.glowPink,
+                                            blurRadius: 20.0,
+                                            spreadRadius: -4.0,
+                                            offset: const Offset(0, 8.0),
+                                          ),
+                                        ],
+                                ),
+                                child: Center(
+                                  child: provider.isLoading
+                                      ? const SizedBox(
+                                          width: 24.0,
+                                          height: 24.0,
+                                          child: CircularProgressIndicator(
+                                            color: AppColors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          isLast
+                                              ? (widget.isEditing
+                                                    ? 'Save Changes ✨'
+                                                    : 'Complete My Profile ✨')
+                                              : 'Continue',
+                                          style: AppTextStyles.buttonLarge
+                                              .copyWith(
+                                                fontSize: 16.5,
+                                                color: AppColors.white,
+                                              ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -770,35 +1079,41 @@ class _QuestionPageState extends State<_QuestionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = context.isTablet;
     return FadeTransition(
       opacity: widget.fadeAnim,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 40.h),
+        padding: EdgeInsets.fromLTRB(
+          isTablet ? 40.0 : 24.w,
+          0,
+          isTablet ? 40.0 : 24.w,
+          isTablet ? 32.0 : 40.h,
+        ),
         children: [
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(12.r),
+                padding: EdgeInsets.all(isTablet ? 12.0 : 12.r),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: AppColors.primaryGradient,
                   ),
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(isTablet ? 16.0 : 16.r),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.glowPurple.withValues(alpha: 0.5),
-                      blurRadius: 12.r,
-                      spreadRadius: -2.r,
+                      blurRadius: isTablet ? 12.0 : 12.r,
+                      spreadRadius: isTablet ? -2.0 : -2.r,
                     ),
                   ],
                 ),
                 child: Icon(
                   widget.page.icon,
                   color: AppColors.white,
-                  size: 26.sp,
+                  size: isTablet ? 26.0 : 26.sp,
                 ),
               ),
-              14.horizontalSpace,
+              isTablet ? const SizedBox(width: 14.0) : 14.horizontalSpace,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -809,13 +1124,13 @@ class _QuestionPageState extends State<_QuestionPage> {
                         color: AppColors.purple,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2,
-                        fontSize: 12.sp,
+                        fontSize: isTablet ? 12.0 : 12.sp,
                       ),
                     ),
                     Text(
                       widget.page.title,
                       style: AppTextStyles.headingMedium.copyWith(
-                        fontSize: 22.sp,
+                        fontSize: isTablet ? 24.0 : 22.sp,
                         height: 1.1,
                         color: AppColors.textDark,
                       ),
@@ -825,12 +1140,12 @@ class _QuestionPageState extends State<_QuestionPage> {
               ),
             ],
           ),
-          32.verticalSpace,
+          isTablet ? const SizedBox(height: 28.0) : 32.verticalSpace,
           ...List.generate(widget.page.questions.length, (i) {
             final q = widget.page.questions[i];
             return Padding(
               key: _questionKeys[i],
-              padding: EdgeInsets.only(bottom: 20.h),
+              padding: EdgeInsets.only(bottom: isTablet ? 16.0 : 20.h),
               child: _QuestionCard(
                 index: i + 1,
                 question: q,
@@ -851,7 +1166,7 @@ class _QuestionPageState extends State<_QuestionPage> {
               ),
             );
           }),
-          8.verticalSpace,
+          isTablet ? const SizedBox(height: 8.0) : 8.verticalSpace,
         ],
       ),
     );
@@ -1017,6 +1332,7 @@ class _QuestionCardState extends State<_QuestionCard> {
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, provider, _) {
+        final isTablet = context.isTablet;
         final bool isFocused = provider.focusedQuestionIndex == widget.index;
         final bool isError =
             provider.showOnboardingErrors && widget.value.trim().isEmpty;
@@ -1029,7 +1345,7 @@ class _QuestionCardState extends State<_QuestionCard> {
         final bool isHighlighted =
             widget.isHighlighted && !isError && !isFocused && !hasOtherFocus;
 
-        final cardRadius = 20.r;
+        final cardRadius = isTablet ? 20.0 : 20.r;
         final card = AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
@@ -1043,7 +1359,9 @@ class _QuestionCardState extends State<_QuestionCard> {
                         : isFocused
                         ? AppColors.pink
                         : AppColors.borderVeryLight,
-                    width: (isFocused || isError) ? 1.5.w : 1.w,
+                    width: (isFocused || isError)
+                        ? (isTablet ? 1.5 : 1.5.w)
+                        : (isTablet ? 1.0 : 1.w),
                   ),
             boxShadow: [
               BoxShadow(
@@ -1055,23 +1373,23 @@ class _QuestionCardState extends State<_QuestionCard> {
                     ? AppColors.glowPurple.withValues(alpha: 0.18)
                     : AppColors.black.withValues(alpha: 0.04),
                 blurRadius: (isFocused || isError || isHighlighted)
-                    ? 16.r
-                    : 8.r,
-                spreadRadius: -2.r,
-                offset: Offset(0, 3.h),
+                    ? (isTablet ? 16.0 : 16.r)
+                    : (isTablet ? 8.0 : 8.r),
+                spreadRadius: isTablet ? -2.0 : -2.r,
+                offset: Offset(0, isTablet ? 3.0 : 3.h),
               ),
             ],
           ),
           child: Padding(
-            padding: EdgeInsets.all(16.r),
+            padding: EdgeInsets.all(isTablet ? 16.0 : 16.r),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      width: 26.w,
-                      height: 26.w,
+                      width: isTablet ? 28.0 : 26.w,
+                      height: isTablet ? 28.0 : 26.w,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -1086,26 +1404,26 @@ class _QuestionCardState extends State<_QuestionCard> {
                           '${widget.index}',
                           style: TextStyle(
                             color: AppColors.white,
-                            fontSize: 12.sp,
+                            fontSize: isTablet ? 12.5 : 12.sp,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
                     ),
-                    10.horizontalSpace,
+                    isTablet ? const SizedBox(width: 10.0) : 10.horizontalSpace,
                     Expanded(
                       child: Text(
                         widget.question.text,
                         style: AppTextStyles.bodyMedium.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textDark,
-                          fontSize: 16.sp,
+                          fontSize: isTablet ? 16.0 : 16.sp,
                         ),
                       ),
                     ),
                   ],
                 ),
-                12.verticalSpace,
+                isTablet ? const SizedBox(height: 12.0) : 12.verticalSpace,
                 if (widget.question.isChoice)
                   _buildChoices()
                 else
@@ -1122,7 +1440,7 @@ class _QuestionCardState extends State<_QuestionCard> {
         // with the real card inset inside it.
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.all(1.8.w),
+          padding: EdgeInsets.all(isTablet ? 1.8 : 1.8.w),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: AppColors.primaryGradient,
@@ -1138,6 +1456,7 @@ class _QuestionCardState extends State<_QuestionCard> {
   }
 
   Widget _buildChoices() {
+    final isTablet = context.isTablet;
     final hasValue = widget.value.trim().isNotEmpty;
     final isMulti = widget.question.kind == _AnswerKind.multiChoice;
     final multiItems = isMulti ? _splitMulti(widget.value) : <String>[];
@@ -1150,15 +1469,18 @@ class _QuestionCardState extends State<_QuestionCard> {
           behavior: HitTestBehavior.opaque,
           child: Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 16.0 : 16.w,
+              vertical: isTablet ? 14.0 : 14.h,
+            ),
             decoration: BoxDecoration(
               color: AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
               border: Border.all(
                 color: hasValue
                     ? AppColors.purple.withValues(alpha: 0.4)
                     : AppColors.transparent,
-                width: 1.w,
+                width: isTablet ? 1.0 : 1.w,
               ),
             ),
             child: Row(
@@ -1168,27 +1490,27 @@ class _QuestionCardState extends State<_QuestionCard> {
                   color: hasValue
                       ? AppColors.purple
                       : AppColors.purple.withValues(alpha: 0.5),
-                  size: 18.sp,
+                  size: isTablet ? 18.0 : 18.sp,
                 ),
-                12.horizontalSpace,
+                isTablet ? const SizedBox(width: 12.0) : 12.horizontalSpace,
                 Expanded(
                   child: !hasValue
                       ? Text(
                           widget.question.hint,
                           style: AppTextStyles.hint.copyWith(
                             color: AppColors.textLightGrey,
-                            fontSize: 14.sp,
+                            fontSize: isTablet ? 14.0 : 14.sp,
                           ),
                         )
                       : isMulti
                       ? Wrap(
-                          spacing: 6.w,
-                          runSpacing: 6.h,
+                          spacing: isTablet ? 6.0 : 6.w,
+                          runSpacing: isTablet ? 6.0 : 6.h,
                           children: multiItems.map((item) {
                             return Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 10.w,
-                                vertical: 4.h,
+                                horizontal: isTablet ? 10.0 : 10.w,
+                                vertical: isTablet ? 4.0 : 4.h,
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -1197,12 +1519,14 @@ class _QuestionCardState extends State<_QuestionCard> {
                                     AppColors.pink.withValues(alpha: 0.12),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(20.r),
+                                borderRadius: BorderRadius.circular(
+                                  isTablet ? 20.0 : 20.r,
+                                ),
                                 border: Border.all(
                                   color: AppColors.purple.withValues(
                                     alpha: 0.25,
                                   ),
-                                  width: 1.w,
+                                  width: isTablet ? 1.0 : 1.w,
                                 ),
                               ),
                               child: Row(
@@ -1212,7 +1536,7 @@ class _QuestionCardState extends State<_QuestionCard> {
                                     item,
                                     style: AppTextStyles.bodyMedium.copyWith(
                                       color: AppColors.purple,
-                                      fontSize: 12.sp,
+                                      fontSize: isTablet ? 12.5 : 12.sp,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -1225,22 +1549,22 @@ class _QuestionCardState extends State<_QuestionCard> {
                           widget.value,
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textDark,
-                            fontSize: 14.sp,
+                            fontSize: isTablet ? 14.5 : 14.sp,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                 ),
-                8.horizontalSpace,
+                isTablet ? const SizedBox(width: 8.0) : 8.horizontalSpace,
                 Container(
-                  padding: EdgeInsets.all(4.r),
+                  padding: EdgeInsets.all(isTablet ? 4.0 : 4.r),
                   decoration: BoxDecoration(
                     color: AppColors.purple.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8.r),
+                    borderRadius: BorderRadius.circular(isTablet ? 8.0 : 8.r),
                   ),
                   child: Icon(
                     Icons.keyboard_arrow_down_rounded,
                     color: AppColors.purple,
-                    size: 18.sp,
+                    size: isTablet ? 18.0 : 18.sp,
                   ),
                 ),
               ],
@@ -1248,46 +1572,46 @@ class _QuestionCardState extends State<_QuestionCard> {
           ),
         ),
         if (_showOtherInput) ...[
-          10.verticalSpace,
+          isTablet ? const SizedBox(height: 10.0) : 10.verticalSpace,
           TextField(
             controller: _otherController,
             textCapitalization: TextCapitalization.sentences,
             onChanged: _onOtherTextChanged,
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textDark,
-              fontSize: 14.sp,
+              fontSize: isTablet ? 14.5 : 14.sp,
             ),
             decoration: InputDecoration(
               hintText: 'Please specify your details…',
               hintStyle: AppTextStyles.hint.copyWith(
                 color: AppColors.textLightGrey,
-                fontSize: 14.sp,
+                fontSize: isTablet ? 14.0 : 14.sp,
               ),
               prefixIcon: Icon(
                 Icons.edit_outlined,
                 color: AppColors.purple.withValues(alpha: 0.5),
-                size: 16.sp,
+                size: isTablet ? 16.0 : 16.sp,
               ),
               filled: true,
               fillColor: AppColors.surfaceLight,
               contentPadding: EdgeInsets.symmetric(
-                horizontal: 16.w,
-                vertical: 12.h,
+                horizontal: isTablet ? 16.0 : 16.w,
+                vertical: isTablet ? 12.0 : 12.h,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
                 borderSide: BorderSide(
                   color: AppColors.purple.withValues(alpha: 0.3),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
                 borderSide: BorderSide(
                   color: AppColors.purple.withValues(alpha: 0.3),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
                 borderSide: const BorderSide(
                   color: AppColors.purple,
                   width: 1.5,
@@ -1307,6 +1631,9 @@ class _QuestionCardState extends State<_QuestionCard> {
     showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      constraints: context.isTablet
+          ? const BoxConstraints(maxWidth: 580.0)
+          : null,
       backgroundColor: AppColors.transparent,
       builder: (sheetContext) {
         return _DropdownSelectionSheet(
@@ -1333,6 +1660,7 @@ class _QuestionCardState extends State<_QuestionCard> {
   }
 
   Widget _buildTextField() {
+    final isTablet = context.isTablet;
     return Actions(
       actions: {
         NextFocusIntent: CallbackAction<NextFocusIntent>(
@@ -1356,35 +1684,35 @@ class _QuestionCardState extends State<_QuestionCard> {
         onSubmitted: (_) => widget.onSubmitted(),
         style: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.textDark,
-          fontSize: 14.sp,
+          fontSize: isTablet ? 14.5 : 14.sp,
         ),
         decoration: InputDecoration(
           hintText: widget.question.hint,
           hintStyle: AppTextStyles.hint.copyWith(
             color: AppColors.textLightGrey,
-            fontSize: 14.sp,
+            fontSize: isTablet ? 14.0 : 14.sp,
           ),
           prefixIcon: Icon(
             widget.question.icon,
             color: AppColors.purple.withValues(alpha: 0.5),
-            size: 18.sp,
+            size: isTablet ? 18.0 : 18.sp,
           ),
           filled: true,
           fillColor: AppColors.surfaceLight,
           contentPadding: EdgeInsets.symmetric(
-            horizontal: 16.w,
-            vertical: 12.h,
+            horizontal: isTablet ? 16.0 : 16.w,
+            vertical: isTablet ? 12.0 : 12.h,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(isTablet ? 12.0 : 12.r),
             borderSide: BorderSide.none,
           ),
         ),
@@ -1525,6 +1853,7 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = context.isTablet;
     final options = widget.question.options ?? const [];
     final isMulti = widget.question.kind == _AnswerKind.multiChoice;
     final selectedCount = isMulti
@@ -1540,12 +1869,14 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
       ),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(isTablet ? 28.0 : 28.r),
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.black.withValues(alpha: 0.15),
-            blurRadius: 30.r,
-            offset: Offset(0, -5.h),
+            blurRadius: isTablet ? 30.0 : 30.r,
+            offset: Offset(0, isTablet ? -5.0 : -5.h),
           ),
         ],
       ),
@@ -1554,24 +1885,24 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            12.verticalSpace,
+            isTablet ? const SizedBox(height: 12.0) : 12.verticalSpace,
             Center(
               child: Container(
-                width: 44.w,
-                height: 4.h,
+                width: isTablet ? 44.0 : 44.w,
+                height: isTablet ? 4.0 : 4.h,
                 decoration: BoxDecoration(
                   color: AppColors.borderLight,
-                  borderRadius: BorderRadius.circular(2.r),
+                  borderRadius: BorderRadius.circular(isTablet ? 2.0 : 2.r),
                 ),
               ),
             ),
-            16.verticalSpace,
+            isTablet ? const SizedBox(height: 16.0) : 16.verticalSpace,
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              padding: EdgeInsets.symmetric(horizontal: isTablet ? 24.0 : 24.w),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(10.r),
+                    padding: EdgeInsets.all(isTablet ? 10.0 : 10.r),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -1579,15 +1910,17 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                           AppColors.pink.withValues(alpha: 0.15),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(12.r),
+                      borderRadius: BorderRadius.circular(
+                        isTablet ? 12.0 : 12.r,
+                      ),
                     ),
                     child: Icon(
                       widget.question.icon,
                       color: AppColors.purple,
-                      size: 22.sp,
+                      size: isTablet ? 22.0 : 22.sp,
                     ),
                   ),
-                  14.horizontalSpace,
+                  isTablet ? const SizedBox(width: 14.0) : 14.horizontalSpace,
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1595,19 +1928,21 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                         Text(
                           widget.question.text,
                           style: AppTextStyles.headingSmall.copyWith(
-                            fontSize: 16.sp,
+                            fontSize: isTablet ? 17.0 : 16.sp,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textDark,
                           ),
                         ),
-                        4.verticalSpace,
+                        isTablet
+                            ? const SizedBox(height: 4.0)
+                            : 4.verticalSpace,
                         Text(
                           isMulti
                               ? 'Select all options that align with you'
                               : 'Choose an option from the list',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textLightGrey,
-                            fontSize: 12.sp,
+                            fontSize: isTablet ? 13.0 : 12.sp,
                           ),
                         ),
                       ],
@@ -1618,21 +1953,27 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                     icon: Icon(
                       Icons.close_rounded,
                       color: AppColors.textGrey,
-                      size: 22.sp,
+                      size: isTablet ? 22.0 : 22.sp,
                     ),
-                    splashRadius: 20.r,
+                    splashRadius: isTablet ? 20.0 : 20.r,
                   ),
                 ],
               ),
             ),
-            12.verticalSpace,
+            isTablet ? const SizedBox(height: 12.0) : 12.verticalSpace,
             const Divider(color: AppColors.borderVeryLight, height: 1),
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
-                padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 16.h),
+                padding: EdgeInsets.fromLTRB(
+                  isTablet ? 20.0 : 20.w,
+                  isTablet ? 16.0 : 16.h,
+                  isTablet ? 20.0 : 20.w,
+                  isTablet ? 16.0 : 16.h,
+                ),
                 itemCount: options.length,
-                separatorBuilder: (context, index) => 8.verticalSpace,
+                separatorBuilder: (context, index) =>
+                    isTablet ? const SizedBox(height: 8.0) : 8.verticalSpace,
                 itemBuilder: (context, idx) {
                   final option = options[idx];
                   final selected = _isSelected(option);
@@ -1644,12 +1985,16 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                       color: selected
                           ? AppColors.purple.withValues(alpha: 0.06)
                           : AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(14.r),
+                      borderRadius: BorderRadius.circular(
+                        isTablet ? 14.0 : 14.r,
+                      ),
                       border: Border.all(
                         color: selected
                             ? AppColors.purple
                             : AppColors.borderFaded,
-                        width: selected ? 1.5.w : 1.w,
+                        width: selected
+                            ? (isTablet ? 1.5 : 1.5.w)
+                            : (isTablet ? 1.0 : 1.w),
                       ),
                     ),
                     child: Material(
@@ -1663,11 +2008,13 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                             _toggleMulti(option);
                           }
                         },
-                        borderRadius: BorderRadius.circular(14.r),
+                        borderRadius: BorderRadius.circular(
+                          isTablet ? 14.0 : 14.r,
+                        ),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 14.h,
+                            horizontal: isTablet ? 16.0 : 16.w,
+                            vertical: isTablet ? 14.0 : 14.h,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1676,14 +2023,16 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                 children: [
                                   AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
-                                    width: 22.w,
-                                    height: 22.w,
+                                    width: isTablet ? 22.0 : 22.w,
+                                    height: isTablet ? 22.0 : 22.w,
                                     decoration: BoxDecoration(
                                       shape: isMulti
                                           ? BoxShape.rectangle
                                           : BoxShape.circle,
                                       borderRadius: isMulti
-                                          ? BorderRadius.circular(6.r)
+                                          ? BorderRadius.circular(
+                                              isTablet ? 6.0 : 6.r,
+                                            )
                                           : null,
                                       gradient: selected
                                           ? const LinearGradient(
@@ -1695,18 +2044,20 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                         color: selected
                                             ? AppColors.transparent
                                             : AppColors.borderFaded,
-                                        width: 1.5.w,
+                                        width: isTablet ? 1.5 : 1.5.w,
                                       ),
                                     ),
                                     child: selected
                                         ? Icon(
                                             Icons.check_rounded,
-                                            size: 14.sp,
+                                            size: isTablet ? 14.0 : 14.sp,
                                             color: AppColors.white,
                                           )
                                         : null,
                                   ),
-                                  14.horizontalSpace,
+                                  isTablet
+                                      ? const SizedBox(width: 14.0)
+                                      : 14.horizontalSpace,
                                   Expanded(
                                     child: Text(
                                       option,
@@ -1717,14 +2068,16 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                         fontWeight: selected
                                             ? FontWeight.w700
                                             : FontWeight.w500,
-                                        fontSize: 14.sp,
+                                        fontSize: isTablet ? 15.0 : 14.sp,
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                               if (isOther && selected) ...[
-                                12.verticalSpace,
+                                isTablet
+                                    ? const SizedBox(height: 12.0)
+                                    : 12.verticalSpace,
                                 TextField(
                                   controller: _otherController,
                                   textCapitalization:
@@ -1733,22 +2086,24 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                   onChanged: _onOtherTextChanged,
                                   style: AppTextStyles.bodyMedium.copyWith(
                                     color: AppColors.textDark,
-                                    fontSize: 14.sp,
+                                    fontSize: isTablet ? 14.5 : 14.sp,
                                   ),
                                   decoration: InputDecoration(
                                     hintText: 'Type your custom answer…',
                                     hintStyle: AppTextStyles.hint.copyWith(
                                       color: AppColors.textLightGrey,
-                                      fontSize: 13.sp,
+                                      fontSize: isTablet ? 13.5 : 13.sp,
                                     ),
                                     filled: true,
                                     fillColor: AppColors.white,
                                     contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 14.w,
-                                      vertical: 10.h,
+                                      horizontal: isTablet ? 14.0 : 14.w,
+                                      vertical: isTablet ? 10.0 : 10.h,
                                     ),
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderRadius: BorderRadius.circular(
+                                        isTablet ? 10.0 : 10.r,
+                                      ),
                                       borderSide: BorderSide(
                                         color: AppColors.purple.withValues(
                                           alpha: 0.3,
@@ -1756,7 +2111,9 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderRadius: BorderRadius.circular(
+                                        isTablet ? 10.0 : 10.r,
+                                      ),
                                       borderSide: BorderSide(
                                         color: AppColors.purple.withValues(
                                           alpha: 0.3,
@@ -1764,7 +2121,9 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10.r),
+                                      borderRadius: BorderRadius.circular(
+                                        isTablet ? 10.0 : 10.r,
+                                      ),
                                       borderSide: const BorderSide(
                                         color: AppColors.purple,
                                         width: 1.5,
@@ -1784,24 +2143,31 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
             ),
             if (isMulti || _otherActive) ...[
               Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+                padding: EdgeInsets.fromLTRB(
+                  isTablet ? 20.0 : 20.w,
+                  isTablet ? 8.0 : 8.h,
+                  isTablet ? 20.0 : 20.w,
+                  isTablet ? 16.0 : 16.h,
+                ),
                 child: GestureDetector(
                   onTap: () => Navigator.of(context).pop(true),
                   child: Container(
                     width: double.infinity,
-                    height: 52.h,
+                    height: isTablet ? 52.0 : 52.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: AppColors.primaryGradient,
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(
+                        isTablet ? 16.0 : 16.r,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.glowPurple.withValues(alpha: 0.4),
-                          blurRadius: 12.r,
-                          offset: Offset(0, 4.h),
+                          blurRadius: isTablet ? 12.0 : 12.r,
+                          offset: Offset(0, isTablet ? 4.0 : 4.h),
                         ),
                       ],
                     ),
@@ -1813,7 +2179,7 @@ class _DropdownSelectionSheetState extends State<_DropdownSelectionSheet> {
                                   : 'Done')
                             : 'Done',
                         style: AppTextStyles.buttonLarge.copyWith(
-                          fontSize: 15.sp,
+                          fontSize: isTablet ? 15.5 : 15.sp,
                         ),
                       ),
                     ),
